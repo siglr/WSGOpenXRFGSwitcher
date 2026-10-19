@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>WSG OpenXR FG Switcher</AssemblyName>
+    <ApplicationIcon>../assets/WSGClient.ico</ApplicationIcon>
+    <DefineConstants Condition="'$(OfficialRelease)' != 'true'">$(DefineConstants);WSG_NO_AUTO_UPDATE</DefineConstants>
+    <NoWarn>$(NoWarn);SYSLIB0021</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../core/Switcher.Core.csproj" />
+    <EmbeddedResource Include="../assets/wsg-logo.png" LogicalName="wsg-logo.png" />
+    <EmbeddedResource Include="../assets/WSGClient.ico" LogicalName="wsg.ico" />
+    <EmbeddedResource Include="../assets/catalog.signed.json" LogicalName="catalog.signed.json" />
+    <EmbeddedResource Include="../assets/trust-public.pem" LogicalName="trust-public.pem" />
+  </ItemGroup>
+</Project>

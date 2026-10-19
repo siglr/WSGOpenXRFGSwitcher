@@ -1,0 +1,38 @@
+WSG OpenXR FG Switcher — website upload preparation
+
+Destination: https://wesimglide.org/otherdata/tools/
+This folder is prepared locally. Nothing has been uploaded or published.
+The included ZIP is a development preview, not a headset-tested official release.
+Its production automatic-update channel is disabled. Keep that label on the page.
+An official release still requires the steps in PUBLISHING.md.
+
+Upload in this order:
+1. WSG-OpenXR-FG-Switcher.zip
+2. tools.css, openxr.css, openxr.js, and the contents of assets/
+3. WSG-OpenXR-FG-Switcher.html and index.html
+4. Merge the supplied .htaccess rules into the server's existing file.
+   Preserve any other hosting rules; do not replace the whole server directory.
+5. WSG-OpenXR-FG-Switcher.version.json LAST, after the matching ZIP.
+
+Keep the existing Glass Cockpit Refresh and Stream Feeder pages, ZIPs, feeds,
+scripts and assets on the server. This folder adds OpenXR and updates the shared
+index; it does not contain or replace the other tools' downloads or detail pages.
+The shared assets are included so the new index can use all three screenshots.
+UPLOAD-INSTRUCTIONS.txt does not need uploading.
+
+After upload, check all three index cards and the OpenXR download. Check that
+its displayed version, ZIP size and SHA-256 match the metadata and downloaded ZIP.
+Pages/assets should revalidate; the ZIP and metadata should send Cache-Control:
+no-store. The Copy SHA-256 button requires HTTPS (or localhost).
+
+For the next preview, run package.ps1 then tools/prepare-web.ps1. The latter
+uses dist/latest-package.txt and verifies the signed package before copying it.
+It reuses dist/website instead of retaining older website bundles.
+
+Sources: OpenXR page/JS/CSS/image in this project's web/ folder. The shared
+index.html, tools.css, .htaccess and other screenshots belong to the Stream Feeder
+project's web/ folder. That index has also been updated in place so future
+Stream Feeder website preparation keeps the OpenXR card.
+
+Do not upload private signing keys, source code, build tools, application data,
+test fixtures or the rest of dist/.

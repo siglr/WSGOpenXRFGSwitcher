@@ -1,0 +1,16 @@
+.tools/
+.research/
+**/bin/
+**/obj/
+build/
+dist/
+*.user
+*.private.pem
+*.private.xml
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+*.publishsettings
+*.dpapi

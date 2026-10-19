@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>Wsg.OpenXR.Tests</AssemblyName><UseWindowsForms>true</UseWindowsForms></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../core/Switcher.Core.csproj" />
+    <Compile Include="../src/CenteredMessageBox.cs" Link="CenteredMessageBox.cs" />
+  </ItemGroup>
+</Project>

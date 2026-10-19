@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>Wsg.OpenXR.UpdateTests</AssemblyName><Version>1.2.0</Version><PublishSingleFile>true</PublishSingleFile><SelfContained>false</SelfContained><RuntimeIdentifier>win-x64</RuntimeIdentifier></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/Updates/AppUpdate.cs" Link="AppUpdate.cs" />
+    <Compile Include="../src/Updates/ProductVersion.cs" Link="ProductVersion.cs" />
+    <Compile Include="../src/Updates/ReleaseTrust.cs" Link="ReleaseTrust.cs" />
+  </ItemGroup>
+</Project>
