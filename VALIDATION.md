@@ -1,3 +1,17 @@
+## v0.1.2 — overlay settings layout
+
+- 100 isolated UI checks passed. FPS overlay Off/position stays in the main
+  settings row; its size and display toggles have their own labelled block in
+  More options, separate from Hybrid. Flow resolution uses an aligned inline row.
+- Both themes, overlay Off/on, saved option retention, Hybrid independence,
+  older provider versions, tab changes and resize/collapse layout were checked.
+- 397 core checks and all 41 updater checks passed. The signed release package,
+  archive checksum and all 18 managed file hashes verified.
+- Disclosure rows retain their explicit order when hidden native controls return.
+  Disabled overlay controls leave the section and Size labels readable.
+- Validation used isolated preview fixtures. No game, installed provider,
+  runtime registration or user preset was changed.
+
 ## v0.1.1 — djules and independent provider updates
 
 - 397 core checks and 41 updater checks passed. Optional read-only upstream

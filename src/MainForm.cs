@@ -236,8 +236,11 @@ public sealed partial class MainForm : Form
         quality.Parent!.Visible = id == ProviderId.VectorXR || (id is ProviderId.Djules or ProviderId.Elliott && method.SelectedItem as string == "nvidia");
         scale.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott && !native;
         djulesOptions.Visible = ModernDjulesSelected();
+        overlayOptionsHeading.Visible = overlayDetails.Visible = ModernDjulesSelected();
         hybridDepth.Enabled = !busy && hybrid.Checked;
-        overlayDetails.Enabled = !busy && overlayPosition.SelectedItem as string != "off";
+        // Keep the labels readable in both themes while the FPS overlay is off.
+        overlaySize.Enabled = overlayLatency.Enabled = overlayMultiplier.Enabled = overlayHybrid.Enabled =
+            !busy && overlayPosition.SelectedItem as string != "off";
         setupHint.Text = native ? "Native DLSS requires compatible NVIDIA hardware and game support." : "Choose a mod to edit its settings.";
     }
     void PopulateVersions() {

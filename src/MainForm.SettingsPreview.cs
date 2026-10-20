@@ -8,13 +8,16 @@ public sealed partial class MainForm
         if (!preview) throw new InvalidOperationException("Settings UI tests require preview mode.");
         var checks = new List<string>();
         void Check(bool success, string message) {
-            if (!success) throw new InvalidOperationException(message);
+            if (!success) {
+                File.WriteAllText(Path.Combine(output, "settings-ui.json"), Json.Write(new { passed = false, checks, failure = message }));
+                throw new InvalidOperationException(message);
+            }
             checks.Add(message);
         }
         void CheckSectionRows(DisclosureSection section) {
             var body = section.Controls.OfType<DisclosureBody>().Single();
             var bottom = body.Padding.Top;
-            foreach (Control row in body.Controls) {
+            foreach (Control row in body.Controls.Cast<Control>().OrderBy(control => control.Top)) {
                 if (!row.Visible) continue;
                 Check(row.Top >= bottom && row.Bottom <= body.ClientSize.Height,
                     "Expanded " + section.Controls[0].Text + " rows do not overlap or clip: " + row.GetType().Name);
@@ -107,8 +110,37 @@ public sealed partial class MainForm
             && !loadedGame.For(ProviderId.Djules).OverlayLatency, "New djules options save in this game's preset");
         CheckSectionRows(moreOptions); PerformLayout();
         SavePreview(Path.Combine(output, "djules-0.2.14.1-options-dark.png"));
+        hybrid.Checked = false;
+        foreach (var light in new[] { false, true }) {
+            SetLight(light); PerformLayout();
+            Check(overlayOptionsHeading.Visible && overlayOptionsHeading.Text == "FPS overlay options"
+                && overlayOptionsHeading.Bottom <= overlayDetails.Top && overlayDetails.Bottom <= djulesOptions.Top,
+                "FPS overlay options are labelled and separated from Hybrid in " + (light ? "light" : "dark") + " appearance");
+            Check(overlayPosition.Visible && !moreOptions.Contains(overlayPosition) && overlaySize.Enabled
+                && overlayLatency.Enabled && overlayMultiplier.Enabled && overlayHybrid.Enabled && !hybridDepth.Enabled,
+                "Main overlay selector stays accessible and overlay options work independently of Hybrid");
+            Check(overlayOptionsHeading.ForeColor == WindowTheme.Foreground(light), "Overlay heading uses the active theme foreground");
+            var flowLabel = scale.Parent!.Controls.OfType<Label>().Single();
+            Check(flowLabel.Right <= scale.Left && Math.Abs((flowLabel.Top + flowLabel.Height / 2) - (scale.Top + scale.Height / 2)) <= 3 * DeviceDpi / 96,
+                "Flow resolution label and dropdown share a row and align vertically");
+            overlayPosition.SelectedItem = "off"; PerformLayout();
+            Check(!overlaySize.Enabled && !overlayLatency.Enabled && !overlayMultiplier.Enabled && !overlayHybrid.Enabled
+                && overlayDetails.Enabled && overlayDetails.Controls.OfType<Label>().All(label => label.Enabled),
+                "Overlay Off disables its extra controls without dimming their labels");
+            SavePreview(Path.Combine(output, "overlay-options-off-" + (light ? "light" : "dark") + ".png"));
+            overlayPosition.SelectedItem = "upper_right"; PerformLayout();
+            Check(overlaySize.SelectedItem as string == "small" && !overlayLatency.Checked,
+                "Toggling overlay Off preserves its appearance and information choices");
+            CheckSectionRows(moreOptions);
+            foreach (Control control in overlayDetails.Controls)
+                Check(control.Right <= overlayDetails.ClientSize.Width && control.Bottom <= overlayDetails.ClientSize.Height,
+                    "FPS overlay controls fit the available width: " + control.Text);
+            SavePreview(Path.Combine(output, "overlay-options-on-" + (light ? "light" : "dark") + ".png"));
+        }
+        SetLight(false); hybrid.Checked = true;
         choices[ProviderId.Elliott].Checked = true;
-        Check(!djulesOptions.Visible && !scale.Items.Contains("25"), "Elliott hides new djules-only controls");
+        Check(!djulesOptions.Visible && !overlayOptionsHeading.Visible && !overlayDetails.Visible
+            && !scale.Items.Contains("25"), "Elliott hides new djules-only controls");
         choices[ProviderId.Djules].Checked = true;
         Check(hybrid.Checked && hybridDepth.Checked && scale.SelectedItem as string == "25", "New djules controls survive changing tabs");
         versions[ProviderId.Djules].SelectedItem = "0.2.13.4";

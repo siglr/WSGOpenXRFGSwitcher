@@ -1,3 +1,17 @@
+# v0.1.2 — October 20, 2026
+
+The release folder and ZIP passed Microsoft Defender custom scans (exit 0,
+no threats). Engine 1.1.26090.9; signatures 1.461.115.0. Antivirus and real-time
+protection remained enabled. No security settings changed or samples uploaded.
+
+ZIP SHA-256:
+`5c29679e86b0cc4bb2e0ca8e2e8dd0272a662a8a190df552664b72d160fa20b0`
+
+This build changes settings layout only. Overlay controls remain independent of
+Hybrid, and the existing signed update identity and provider adapters are retained.
+All 18 managed file hashes and signed package metadata verified. The packaged
+app-update channel remains enabled.
+
 # v0.1.1 — October 20, 2026
 
 The final release folder and ZIP passed Microsoft Defender custom scans (exit 0,

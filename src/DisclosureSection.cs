@@ -30,6 +30,7 @@ internal sealed class DisclosureSection : TableLayoutPanel
     internal void AddRow(Control control) {
         control.Dock = DockStyle.None;
         control.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+        control.TabIndex = body.Controls.Count;
         body.Controls.Add(control);
     }
 }
@@ -39,10 +40,13 @@ internal sealed class DisclosureSection : TableLayoutPanel
 // height of three rows even though the buttons fit on one row when displayed.
 internal sealed class DisclosureBody : Panel
 {
+    // Native handle creation can change sibling z-order when hidden controls
+    // reappear. Layout follows the explicit tab order, not that mutable order.
+    IEnumerable<Control> Rows => Controls.Cast<Control>().OrderBy(control => control.TabIndex);
     public override Size GetPreferredSize(Size proposedSize) {
         var width = Math.Max(1, (Parent?.ClientSize.Width ?? Width) - Margin.Horizontal);
         var height = Padding.Vertical;
-        foreach (Control child in Controls) {
+        foreach (Control child in Rows) {
             if (!child.Visible) continue;
             var available = Math.Max(1, width - Padding.Horizontal - child.Margin.Horizontal);
             height += child.GetPreferredSize(new Size(available, 0)).Height + child.Margin.Vertical;
@@ -51,7 +55,7 @@ internal sealed class DisclosureBody : Panel
     }
     protected override void OnLayout(LayoutEventArgs e) {
         var y = Padding.Top;
-        foreach (Control child in Controls) {
+        foreach (Control child in Rows) {
             if (!child.Visible) continue;
             var width = Math.Max(1, ClientSize.Width - Padding.Horizontal - child.Margin.Horizontal);
             var height = child.GetPreferredSize(new Size(width, 0)).Height;

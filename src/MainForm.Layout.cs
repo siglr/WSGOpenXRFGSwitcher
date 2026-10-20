@@ -16,6 +16,7 @@ public sealed partial class MainForm
     readonly Label providerUpdateHint = TextLabel("", 9);
     readonly Label vectorProfile = TextLabel("", 9);
     readonly Label compatibility = TextLabel("", 9);
+    readonly Label overlayOptionsHeading = TextLabel("FPS overlay options", 9, true);
     readonly DisclosureSection moreOptions = new(), installationDetails = new(), compatibilityDetails = new();
     readonly ToolTip hints = new() { AutoPopDelay = 12000, InitialDelay = 500, ReshowDelay = 150, ShowAlways = true };
     string compatibilityAttention = "";
@@ -97,8 +98,12 @@ public sealed partial class MainForm
         var settings = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
         foreach (var pair in new[] { ("Generation method", method), ("Frame rate", multiplier), ("Quality", quality), ("FPS overlay", overlayPosition), ("Flow resolution", scale) }) {
             var field = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Margin = new Padding(0, 0, 12, 0) };
-            field.Controls.Add(TextLabel(pair.Item1, 9)); pair.Item2.Width = pair.Item2 == method ? 185 : 140; pair.Item2.AccessibleName = pair.Item1; field.Controls.Add(pair.Item2);
-            if (pair.Item2 == scale) moreOptions.AddRow(field); else settings.Controls.Add(field);
+            var label = TextLabel(pair.Item1, 9); field.Controls.Add(label);
+            pair.Item2.Width = pair.Item2 == method ? 185 : 140; pair.Item2.AccessibleName = pair.Item1; field.Controls.Add(pair.Item2);
+            if (pair.Item2 == scale) {
+                field.FlowDirection = FlowDirection.LeftToRight; field.Margin = new Padding(0, 0, 0, 8);
+                label.Margin = new Padding(0, 8, 12, 0); moreOptions.AddRow(field);
+            } else settings.Controls.Add(field);
         }
         Row(settings);
         var switches = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
@@ -106,9 +111,12 @@ public sealed partial class MainForm
         Row(overlay); switches.Controls.Add(preferFps); switches.Controls.Add(lowerVram); moreOptions.AddRow(switches);
         djulesOptions.Controls.Add(hybrid); djulesOptions.Controls.Add(hybridDepth);
         overlaySize.Width = 140; overlaySize.AccessibleName = "OFXR overlay size";
-        overlayDetails.Controls.Add(TextLabel("Overlay size", 9)); overlayDetails.Controls.Add(overlaySize);
+        var overlaySizeLabel = TextLabel("Size", 9); overlaySizeLabel.Margin = new Padding(0, 8, 8, 0);
+        overlayDetails.Controls.Add(overlaySizeLabel); overlayDetails.Controls.Add(overlaySize);
         overlayDetails.Controls.Add(overlayLatency); overlayDetails.Controls.Add(overlayMultiplier); overlayDetails.Controls.Add(overlayHybrid);
-        djulesOptions.Controls.Add(overlayDetails); moreOptions.AddRow(djulesOptions);
+        overlayOptionsHeading.Margin = new Padding(0, 8, 0, 2); overlayDetails.Margin = new Padding(0, 0, 0, 12);
+        moreOptions.AddRow(overlayOptionsHeading); moreOptions.AddRow(overlayDetails); moreOptions.AddRow(djulesOptions);
+        hints.SetToolTip(overlayOptionsHeading, "Appearance and information shown by the FPS overlay. Choose a corner in the FPS overlay dropdown above to enable it.");
         hints.SetToolTip(hybrid, "djules 0.2.14.1+: combines a DLSS game's motion vectors with optical flow. Adds GPU work; requires game support. Off by default.");
         hints.SetToolTip(hybridDepth, "Uses game depth to improve thin nearby objects. Requires Hybrid and adds GPU work, especially at high VR resolutions.");
         hints.SetToolTip(scale, "Optical-flow input resolution. Lower values reduce GPU work and motion detail. 25% requires djules 0.2.14.1+. Applies to both optical-flow backends in that release.");
