@@ -41,6 +41,7 @@ internal static class Program
                 catch (Exception ex) { storage.Log("Startup update deferred: " + ex.Message); }
             }
             var catalog = new Catalog(Resource("catalog.signed.json"), Resource("trust-public.pem"));
+            if (!smoke) ProviderCatalogUpdates.LoadSaved(storage, catalog);
             if (launch.ApplyOnce) {
                 // One-shot commands leave the applied providers running. Explicit UI Exit is a different operation.
                 var preset = launch.Resolve(state);

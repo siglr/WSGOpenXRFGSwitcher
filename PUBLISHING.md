@@ -79,5 +79,25 @@ package. The helper executes without elevation; only the separate layer helper
 can request elevation, and only for existing VectorXR registration enable flags.
 
 Catalog signatures use the domain prefix WSG-CATALOG-v1. Update signatures use
-WSGOpenXrFgSwitcher release v1 / inventory v1. The authenticated catalog itself is
-embedded in the app; a reviewed catalog update is distributed with a WSG release.
+WSGOpenXrFgSwitcher release v1 / inventory v1. The app embeds a fallback catalog
+and accepts newer signed provider catalogs from the fixed product feed.
+
+## Provider updates without a WSG rebuild
+
+Review upstream downloads, exact hashes/inventories and configuration compatibility
+in assets/catalog.reviewed.json. Preserve existing entries and package identities.
+Set MinimumSwitcherVersion only when new settings or adapter behavior require it.
+Keep new combinations experimental until headset-tested. Then run:
+
+    ./tools/prepare-provider-catalog.ps1 -SigningKey <release-key.dpapi> -Revision <increasing-number>
+
+Upload dist/provider-catalog/WSG-OpenXR-FG-Switcher.providers.json to
+https://wesimglide.org/otherdata/tools/. This signs metadata with the established
+product key and performs no app build, provider installation or network upload.
+Commit the reviewed catalog and signed envelope for reproducibility.
+
+WSG 0.1.1+ refreshes this list on visible startup, on request, and when reopened
+after an hour. It caches verified metadata for offline use and launch scripts.
+No periodic network check runs in the tray. A refresh offers versions without
+changing installed mods or saved version selections. Invalid signatures, rollback,
+same-revision edits and changed package identities leave the current catalog intact.

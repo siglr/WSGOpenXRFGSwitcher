@@ -57,7 +57,7 @@ public static class StartupLaunch
     public static async Task Apply(Storage storage, AppState state, ISwitchHost host, Catalog catalog, GamePreset preset) {
         host.RequireIdle(state.Games);
         var manager = new ProviderManager(storage, catalog, host);
-        var coordinator = new SwitchCoordinator(storage, host, catalog.Verify, catalog.ValidateCoexistence);
+        var coordinator = new SwitchCoordinator(storage, host, catalog.Verify, catalog.ValidateCoexistence, catalog.Get);
         if (manager.InstallationRecoveryPending || manager.RemovalRecoveryPending || coordinator.RecoveryPending)
             throw new InvalidOperationException("Recover the pending operation in WSG before automatic application.");
         var fingerprint = coordinator.Fingerprint();

@@ -1,3 +1,20 @@
+# v0.1.1 — October 20, 2026
+
+The final release folder and ZIP passed Microsoft Defender custom scans (exit 0,
+no threats). Engine 1.1.26090.9; signatures 1.461.115.0. Antivirus and real-time
+protection were enabled. No security settings changed or external samples uploaded.
+
+ZIP SHA-256:
+`00f121631aad8d673d8a69e1ce39bbbbbe924c57e5fd09f13332df5aa101ab6d`
+
+All 18 managed file hashes, package signatures and the provider-catalog signature
+verified. The packaged app-update flag is enabled. Independent provider updates
+are signed metadata only; they cannot install providers or change registrations
+by themselves. Hidden/busy deferral, offline use and invalid metadata were tested.
+The new djules tray/layer binaries were inspected unchanged and have valid upstream
+publisher signatures. They were not executed. WSG itself remains without
+Authenticode signing; the earlier trust limitations still apply.
+
 # Antivirus review — v0.1.0 public preview
 
 The final release directory and ZIP passed Microsoft Defender custom scans on

@@ -44,4 +44,6 @@ $html = [regex]::Replace($html, '(?<prefix>(?:src|href)=")(?<asset>tools\.css|op
 # Re-running replaces the same files rather than accumulating dated copies.
 Copy-Item -LiteralPath ($package + '.zip') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.zip') -Force
 Copy-Item -LiteralPath ($package + '.version.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.version.json') -Force
+Copy-Item -LiteralPath (Join-Path $project 'assets/catalog.signed.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.providers.json') -Force
+[IO.File]::WriteAllText((Join-Path $destination 'WSG-OpenXR-FG-Switcher.zip.sha256'), (Get-FileHash -LiteralPath ($package + '.zip')).Hash.ToLowerInvariant() + '  WSG-OpenXR-FG-Switcher.zip' + [char]10)
 Write-Output "Website upload files prepared: $destination"

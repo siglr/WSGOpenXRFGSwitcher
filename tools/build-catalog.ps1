@@ -4,6 +4,7 @@ $ErrorActionPreference = 'Stop'
 $taskPayload = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path $ReviewedJson)))
 . (Join-Path $PSScriptRoot 'signing-key.ps1')
 $taskRsa = Import-WsgSigningKey $PrivateKeyPath
+if ($taskRsa.ExportSubjectPublicKeyInfoPem() -ne [IO.File]::ReadAllText((Join-Path (Split-Path $PSScriptRoot -Parent) 'assets/trust-public.pem'))) { throw 'Catalog signing key does not match this product.' }
 $taskBytes = [Text.Encoding]::UTF8.GetBytes("WSG-CATALOG-v1" + [char]10 + $taskPayload)
 $taskSignature = [Convert]::ToBase64String($taskRsa.SignData($taskBytes, [Security.Cryptography.HashAlgorithmName]::SHA256, [Security.Cryptography.RSASignaturePadding]::Pkcs1))
 $taskEnvelope = @{ Payload=$taskPayload; Signature=$taskSignature } | ConvertTo-Json

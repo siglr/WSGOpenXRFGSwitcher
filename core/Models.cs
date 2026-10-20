@@ -22,8 +22,15 @@ public sealed record EngineSettings
     public bool LowerVram { get; set; } = true;
     public bool Overlay { get; set; } = true;
     public string OverlayPosition { get; set; } = "upper_right";
+    public bool Hybrid { get; set; }
+    public bool HybridDepthSearch { get; set; }
+    public string OverlaySize { get; set; } = "big";
+    public bool OverlayLatency { get; set; } = true;
+    public bool OverlayMultiplier { get; set; } = true;
+    public bool OverlayHybridStatus { get; set; } = true;
     public static EngineSettings Defaults(ProviderId id) => id == ProviderId.VectorXR
-        ? new() { Method = "interpolate", Multiplier = "dynamic", Quality = "balanced" } : new();
+        ? new() { Method = "interpolate", Multiplier = "dynamic", Quality = "balanced" }
+        : id == ProviderId.Djules ? new() { Method = "fidelityfx" } : new();
 }
 public sealed record GamePreset
 {

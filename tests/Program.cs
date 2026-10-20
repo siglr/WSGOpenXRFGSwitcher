@@ -214,6 +214,8 @@ try {
     CleanupTests.Run(root, Check);
     await SetupTests.Run(root, Check, Reject);
     await SettingsCompatibilityTests.Run(Check, Reject);
+    await DjulesReleaseTests.Run(root, Check, Reject);
+    await ProviderCatalogTests.Run(root, Check, Reject);
     await StartupTests.Run(root, vector, Check, Reject);
     // Optional read-only verification of pinned upstream packages; never execute providers.
     if (args.Length == 1) {

@@ -174,7 +174,7 @@ public sealed partial class ProviderManager(Storage storage, Catalog catalog, IS
         storage.Save(state); CompleteInstallJournal();
         status(journal.Previous == null ? "Installation recovered. Any newly installed VectorXR layer is disabled; its official uninstaller remains available." : "Previous VectorXR version, settings, and enable flags restored.");
     }
-    public async Task<List<string>> CheckReleases(CancellationToken cancellation = default) {
+    public async Task<List<string>> CheckReleases(CancellationToken cancellation = default, AppState? state = null) {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         timeout.CancelAfter(TimeSpan.FromSeconds(12));
         var output = await Task.WhenAll(ProviderInfo.All.Select(async provider => {
@@ -182,7 +182,11 @@ public sealed partial class ProviderManager(Storage storage, Catalog catalog, IS
                 var bytes = await Downloads.Get(new Uri("https://api.github.com/repos/" + provider.Repository + "/releases/latest"), 2 * 1024 * 1024, timeout.Token);
                 var tag = JsonNode.Parse(bytes)?["tag_name"]?.GetValue<string>();
                 var reviewed = catalog.Latest(provider.Id).Version;
-                return provider.Name + ": " + (tag == reviewed ? reviewed + " is the reviewed release." : "Upstream " + tag + "; reviewed " + reviewed + ". New versions need a signed WSG catalog update.");
+                var needsApp = catalog.Document.Releases.FirstOrDefault(r => r.Provider == provider.Id && r.Version == tag && !catalog.Supports(r));
+                var available = state != null && !state.Installations.Any(i => i.Provider == provider.Id && i.Version == reviewed);
+                return provider.Name + ": " + (needsApp != null ? tag + " needs WSG " + needsApp.MinimumSwitcherVersion + "+ for new settings."
+                    : tag == reviewed ? reviewed + (available ? " available — choose it in Version to download." : " is current.")
+                    : "New upstream " + tag + " awaiting compatibility review. Downloadable here: " + reviewed + ".");
             } catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or System.Text.Json.JsonException) { return provider.Name + ": update check unavailable. Installed versions remain usable."; }
         }));
         cancellation.ThrowIfCancellationRequested();

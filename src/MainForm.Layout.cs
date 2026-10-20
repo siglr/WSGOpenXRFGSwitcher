@@ -13,6 +13,7 @@ public sealed partial class MainForm
     readonly Label pendingHint = TextLabel("", 10);
     readonly Label offHint = TextLabel("Turn off frame generation from all three managed mods for a baseline test.", 10);
     readonly Label installLocation = TextLabel("", 9);
+    readonly Label providerUpdateHint = TextLabel("", 9);
     readonly Label vectorProfile = TextLabel("", 9);
     readonly Label compatibility = TextLabel("", 9);
     readonly DisclosureSection moreOptions = new(), installationDetails = new(), compatibilityDetails = new();
@@ -46,7 +47,7 @@ public sealed partial class MainForm
         AddNav(sidebar, "Help", () => { using var help = new HelpForm(state.LightTheme); help.ShowDialog(this); return Task.CompletedTask; });
         AddNav(sidebar, state.LightTheme ? "Use dark appearance" : "Use light appearance", () => { SetLight(!state.LightTheme); return Task.CompletedTask; }, true);
         exitButton = AddNav(sidebar, "Exit", RequestExit, exitAction: true);
-        sidebar.Controls.Add(new Label { Text = "v0.1.0\nDevelopment build\nHeadset testing pending", AutoSize = false, Size = new Size(168, 80), Margin = new Padding(0, 24, 0, 0), Font = new Font("Segoe UI", 9) });
+        sidebar.Controls.Add(new Label { Text = "v" + global::ProductVersion.Value + (AppUpdate.Enabled ? "\nPreview release" : "\nDevelopment build") + "\nHeadset testing pending", AutoSize = false, Size = new Size(168, 80), Margin = new Padding(0, 24, 0, 0), Font = new Font("Segoe UI", 9) });
         root.Controls.Add(workspace, 1, 0);
         var content = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 0, Padding = new Padding(26, 22, 26, 22) };
         content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); workspace.Controls.Add(content);
@@ -91,6 +92,7 @@ public sealed partial class MainForm
             });
             row.Controls.Add(install); versionRows[provider.Id] = row; Row(row);
         }
+        Row(providerUpdateHint);
         moreOptions.SetTitle("More options"); installationDetails.SetTitle("Manage installation");
         var settings = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
         foreach (var pair in new[] { ("Generation method", method), ("Frame rate", multiplier), ("Quality", quality), ("FPS overlay", overlayPosition), ("Flow resolution", scale) }) {
@@ -102,6 +104,15 @@ public sealed partial class MainForm
         var switches = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
         overlay.Text = "Show in-game overlay"; lowerVram.Text = "Reduce VRAM use";
         Row(overlay); switches.Controls.Add(preferFps); switches.Controls.Add(lowerVram); moreOptions.AddRow(switches);
+        djulesOptions.Controls.Add(hybrid); djulesOptions.Controls.Add(hybridDepth);
+        overlaySize.Width = 140; overlaySize.AccessibleName = "OFXR overlay size";
+        overlayDetails.Controls.Add(TextLabel("Overlay size", 9)); overlayDetails.Controls.Add(overlaySize);
+        overlayDetails.Controls.Add(overlayLatency); overlayDetails.Controls.Add(overlayMultiplier); overlayDetails.Controls.Add(overlayHybrid);
+        djulesOptions.Controls.Add(overlayDetails); moreOptions.AddRow(djulesOptions);
+        hints.SetToolTip(hybrid, "djules 0.2.14.1+: combines a DLSS game's motion vectors with optical flow. Adds GPU work; requires game support. Off by default.");
+        hints.SetToolTip(hybridDepth, "Uses game depth to improve thin nearby objects. Requires Hybrid and adds GPU work, especially at high VR resolutions.");
+        hints.SetToolTip(scale, "Optical-flow input resolution. Lower values reduce GPU work and motion detail. 25% requires djules 0.2.14.1+. Applies to both optical-flow backends in that release.");
+        hints.SetToolTip(overlayHybrid, "The provider's overlay reports HYBRID OK or HYBRID KO in game; selecting Hybrid alone does not prove it is working.");
         moreOptions.AddRow(keepVector); coexistHint.Margin = new Padding(0, 3, 0, 8); moreOptions.AddRow(coexistHint); Row(moreOptions);
         var tools = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 0, 0, 12) };
         advanced.Text = "Open mod’s settings…";
@@ -175,6 +186,10 @@ public sealed partial class MainForm
             hints.SetToolTip(recoveryButton, description); recoveryButton.AccessibleDescription = description;
         }
         var selected = loadedGame?.Provider ?? ProviderId.Off;
+        var newest = selected == ProviderId.Off ? null : providers.Catalog.Latest(selected);
+        providerUpdateHint.Visible = newest != null && state.Installations.Any(i => i.Provider == selected)
+            && !state.Installations.Any(i => i.Provider == selected && i.Version == newest.Version);
+        providerUpdateHint.Text = newest == null ? "" : "New version: " + newest.Version + " — choose it in Version to download and install.";
         var compatibilityIssues = ReadCompatibility();
         var conflict = compatibilityIssues.FirstOrDefault(i => i.BlocksApply);
         PresentCompatibility(compatibilityIssues, !preview && loadedGame != null && (selected == ProviderId.VectorXR || loadedGame.KeepVectorFeatures));

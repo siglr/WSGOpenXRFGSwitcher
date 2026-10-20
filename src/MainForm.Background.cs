@@ -8,6 +8,7 @@ public sealed partial class MainForm
     BackgroundCheckMode checkMode;
     int periodicChecks, returnChecks;
     CancellationTokenSource? visibleUpdateCheck;
+    DateTimeOffset lastUpdateCheck;
 
     void RefreshPollingMode(bool? removalForTest = null) {
         if (IsDisposed || Disposing) return;
@@ -45,8 +46,9 @@ public sealed partial class MainForm
         if (!preview) _ = CheckVisibleStartupUpdates();
     }
     async Task CheckVisibleStartupUpdates() {
-        if (!Visible || busy || startupUpdatesChecked) return;
+        if (!Visible || busy || startupUpdatesChecked && DateTimeOffset.UtcNow - lastUpdateCheck < TimeSpan.FromHours(1)) return;
         startupUpdatesChecked = true;
+        lastUpdateCheck = DateTimeOffset.UtcNow;
         using var cancellation = new CancellationTokenSource();
         visibleUpdateCheck = cancellation;
         try { await CheckUpdates(false, cancellation.Token); }

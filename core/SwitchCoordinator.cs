@@ -13,7 +13,7 @@ public sealed record SwitchJournal
     public List<FileMutation> Files { get; set; } = [];
     public List<RegistryChange> Registry { get; set; } = [];
 }
-public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<Installation> verifyInstallation, Action<Installation, Installation>? verifyCoexistence = null)
+public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<Installation> verifyInstallation, Action<Installation, Installation>? verifyCoexistence = null, Func<string, CatalogRelease>? resolveRelease = null)
 {
     readonly SemaphoreSlim gate = new(1, 1);
     public bool Busy { get; private set; }
@@ -71,7 +71,9 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
                 var presetPath = storage.PresetPath(game.Id, selected.Provider, selected.Version);
                 var existing = File.Exists(presetPath) ? File.ReadAllText(presetPath) : "";
                 if (state.ActiveGameId == game.Id && state.ActiveProvider == selected.Provider && File.Exists(host.TraySettingsPath)) existing = File.ReadAllText(host.TraySettingsPath);
-                var patched = Encoding.UTF8.GetBytes(ProviderAdapters.For(selected.Provider).PrepareConfiguration(existing, game, true, false));
+                var release = resolveRelease?.Invoke(selected.CatalogKey);
+                if (release != null) ProviderAdapters.For(selected.Provider).ValidateCapabilities(release, game.For(selected.Provider));
+                var patched = Encoding.UTF8.GetBytes(ProviderAdapters.For(selected.Provider).PrepareConfiguration(existing, game, true, false, release));
                 AddFile(journal, host.TraySettingsPath, patched);
             } else AddFile(journal, host.TraySettingsPath, Read(host.TraySettingsPath));
             SafeFiles.AtomicWrite(storage.JournalPath, Json.Write(journal));

@@ -221,7 +221,41 @@
       "Files": {},
       "Executable": "vectorxr-app.exe",
       "Repository": "DienerTech/vectorxr"
+    },
+    {
+      "Provider": "Djules",
+      "Version": "0.2.14.1",
+      "Repository": "djules75/OFXR-Bridge",
+      "Url": "https://github.com/djules75/OFXR-Bridge/releases/download/0.2.14.1/OFXR-Bridge-v0.2.14.1.zip",
+      "Sha256": "e2d175a41ec0b2bf4c3b9f6aed51d912183422a55246caa3e2c6fdf0c3388cb4",
+      "Size": 1148119,
+      "Executable": "OFXRBridgeTray.exe",
+      "ArchiveRoot": "",
+      "Files": {
+        "external/OpenXR-SDK/LICENSES/Apache-2.0.txt": "406e740a1c88320a2812cd3dae908abdcbe1044b1d6393a90e8c6ef229bd4cf2",
+        "external/OpenXR-SDK/LICENSES/MIT.txt": "0459805ebfeff6e7cbe7a1913fe79e75ad192965dcfebceac11ec4c233acf53c",
+        "external/Vulkan-Headers/LICENSE.md": "f43ba543d73f08f7401d99b697b2b741704eb22b5447a5021fd92b279b297646",
+        "LICENSE": "7d3a95e5e06978064ed3f8e2b7c8f845e7fd8a405294727cc708f94cb83b8059",
+        "licenses/AMD-FidelityFX-MIT.txt": "c93d509cd69d50698796c9c3274247352736ef122a3197ace2010f0978e21aa6",
+        "licenses/GPL-3.0-or-later.txt": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+        "licenses/NVIDIA-Optical-Flow-Headers.txt": "7a33974843d499399226737a0e55a1b8e96ecc984308f5b6372342dc03e4b53b",
+        "licenses/OpenVR-BSD-3-Clause.txt": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329",
+        "licenses/safetyhook-BSL-1.0.txt": "36266a8fd073568394cb81cdb2b124f7fdae2c64c1a7ed09db34b4d22efa2951",
+        "licenses/Zydis-MIT.txt": "77f4584207ed4f10ca1455dfdd25264687321221692f37761e3c7d62100e3d9e",
+        "ofxr/ofxr_bridge.ini": "5f5f2f916e9268330697ad89ce25d0ffdfdf4d52e7947a99081cc3e6248cc8d9",
+        "ofxr/OFXR_vulkan_queue_layer.dll": "f3dee68fab5d398aeb082c41d39eabe7122c8ee0a0ec2f9d475fb20895c5b918",
+        "ofxr/XR_APILAYER_XRFrameBridge_diagnostic.dll": "32aaabcb2effe4bb1eee3b9339c3a1cca37dc1f4b226ae3b1cb5dfe8ba0371d6",
+        "OFXRBridgeTray.exe": "1d5931b0622ab2a1b7f8a1cbc92f0cd55f89dac5c2bf43437e66e18c7b19ff74",
+        "README.md": "b5583dd55daab9522d5b77e3545f90e5a3b98736ae6f09dc8e8d4dd974cf1130",
+        "RELEASE_NOTES.md": "ac0eda26500f704699e922830fcbc72290c1a65c8d77a400b5ec8e47378169ec",
+        "THIRD_PARTY.md": "78b2914b1bf5dccb01a8fbda1b442e0e73ea97f9dac3ea5cd146a42147da1831"
+      },
+      "Compatibility": "Experimental — headset validation pending",
+      "NativeDlss": false,
+      "DjulesHybrid": true,
+      "MinimumSwitcherVersion": "0.1.1"
     }
   ],
-  "Product": "WSG-OpenXR-FG-Switcher"
+  "Product": "WSG-OpenXR-FG-Switcher",
+  "Revision": 2026102001
 }

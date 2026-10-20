@@ -97,6 +97,30 @@ public sealed partial class MainForm
         Check(!vectorProfile.Visible && overlayPosition.Parent!.Visible, "OFXR tabs hide VectorXR-only profile details");
         choices[ProviderId.Djules].Checked = true;
         Check(overlayPosition.SelectedItem as string == "off", "OFXR overlay selection remains isolated across provider tabs");
+        versions[ProviderId.Djules].SelectedItem = "0.2.14.1";
+        Check(djulesOptions.Visible && scale.Items.Contains("25"), "Reviewed djules 0.2.14.1 exposes Hybrid and 25% flow");
+        hybrid.Checked = true; hybridDepth.Checked = true; scale.SelectedItem = "25";
+        overlayPosition.SelectedItem = "upper_right"; overlaySize.SelectedItem = "small"; overlayLatency.Checked = false;
+        SaveControls();
+        Check(loadedGame.For(ProviderId.Djules).Hybrid && loadedGame.For(ProviderId.Djules).HybridDepthSearch
+            && loadedGame.For(ProviderId.Djules).FlowResolution == 25 && loadedGame.For(ProviderId.Djules).OverlaySize == "small"
+            && !loadedGame.For(ProviderId.Djules).OverlayLatency, "New djules options save in this game's preset");
+        CheckSectionRows(moreOptions); PerformLayout();
+        SavePreview(Path.Combine(output, "djules-0.2.14.1-options-dark.png"));
+        choices[ProviderId.Elliott].Checked = true;
+        Check(!djulesOptions.Visible && !scale.Items.Contains("25"), "Elliott hides new djules-only controls");
+        choices[ProviderId.Djules].Checked = true;
+        Check(hybrid.Checked && hybridDepth.Checked && scale.SelectedItem as string == "25", "New djules controls survive changing tabs");
+        versions[ProviderId.Djules].SelectedItem = "0.2.13.4";
+        Check(!djulesOptions.Visible && !scale.Items.Contains("25") && scale.SelectedItem as string == "50"
+            && !loadedGame.For(ProviderId.Djules).Hybrid, "Legacy version selection removes unsupported choices");
+        versions[ProviderId.Djules].SelectedItem = "0.2.14.1";
+        Check(!hybrid.Checked && !hybridDepth.Enabled, "Hybrid remains opt-in when returning to the newer version");
+        state.Installations.Add(new(ProviderId.Djules, "0.2.13.4", output, Path.Combine(output, "OFXRBridgeTray.exe"), "Djules:0.2.13.4"));
+        UpdateSelection();
+        Check(providerUpdateHint.Visible && providerUpdateHint.Text.Contains("0.2.14.1"), "A newer compatible mod is announced next to the version selector");
+        state.Installations.Clear(); UpdateSelection();
+        overlayPosition.SelectedItem = "off"; SaveControls();
         SavePreview(Path.Combine(output, "more-options-dark.png"));
         moreOptions.SetExpanded(false); installationDetails.SetExpanded(false);
         foreach (var id in new[] { ProviderId.Off, ProviderId.VectorXR, ProviderId.Djules, ProviderId.Off, ProviderId.Djules }) {

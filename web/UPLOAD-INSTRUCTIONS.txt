@@ -36,3 +36,5 @@ Stream Feeder website preparation keeps the OpenXR card.
 
 Do not upload private signing keys, source code, build tools, application data,
 test fixtures or the rest of dist/.
+
+Provider-only updates: upload WSG-OpenXR-FG-Switcher.providers.json to this same folder. WSG 0.1.1+ downloads the signed mod list independently of application releases. Keep the existing app ZIP and version feed when publishing only a provider catalog.

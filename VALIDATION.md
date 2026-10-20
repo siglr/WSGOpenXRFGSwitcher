@@ -1,3 +1,21 @@
+## v0.1.1 — djules and independent provider updates
+
+- 397 core checks and 41 updater checks passed. Optional read-only upstream
+  inventory/install-fixture checks passed too (424 checks total in that run).
+- The real djules 0.2.14.1 ZIP matches GitHub's SHA-256. Its tray and both layer
+  DLLs have valid Julien Choulet Authenticode signatures. No upstream binary ran.
+- Hybrid, depth search, quarter-resolution flow and overlay configuration keys
+  were checked against tagged upstream source. Version restrictions, fork
+  isolation, switching back and transaction rollback passed isolated fixtures.
+- Provider-only signed catalog updates add and install a new version without a
+  WSG build. Offline launch-script use, missing/corrupted metadata, invalid
+  signatures, rollback, changed package identities, minimum app versions and
+  hidden/busy deferral passed. No periodic network polling was added in the tray.
+- 62 isolated UI checks cover new controls, version selection, update notices,
+  tab isolation, resize/collapse layout and existing application interactions.
+- Real headset testing for 0.2.14.1 remains pending. No game, installed provider,
+  runtime registration or user preset was changed during validation.
+
 # Validation — v0.1.0 preview
 
 Automated checks and actual headset acceptance are tracked separately.

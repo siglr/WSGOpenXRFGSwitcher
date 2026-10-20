@@ -12,7 +12,14 @@ public sealed partial class MainForm : Form
     readonly ProviderManager providers;
     readonly SwitchCoordinator coordinator;
     readonly bool preview;
-    readonly ComboBox games = Combo(), method = Combo(), multiplier = Combo(), quality = Combo(), scale = Combo(), overlayPosition = Combo();
+    readonly ComboBox games = Combo(), method = Combo(), multiplier = Combo(), quality = Combo(), scale = Combo(), overlayPosition = Combo(), overlaySize = Combo();
+    readonly CheckBox hybrid = new ThemeCheckBox() { Text = "Hybrid (DLSS game motion + optical flow)", AutoSize = true };
+    readonly CheckBox hybridDepth = new ThemeCheckBox() { Text = "Hybrid depth search", AutoSize = true };
+    readonly CheckBox overlayLatency = new ThemeCheckBox() { Text = "Show latency", AutoSize = true };
+    readonly CheckBox overlayMultiplier = new ThemeCheckBox() { Text = "Show multiplier", AutoSize = true };
+    readonly CheckBox overlayHybrid = new ThemeCheckBox() { Text = "Show Hybrid status", AutoSize = true };
+    readonly FlowLayoutPanel djulesOptions = new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.TopDown, WrapContents = false };
+    readonly FlowLayoutPanel overlayDetails = new() { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true };
     readonly Dictionary<ProviderId, RadioButton> choices = new();
     readonly Dictionary<ProviderId, ComboBox> versions = new();
     readonly Dictionary<ProviderId, Label> providerStatus = new();
@@ -39,7 +46,7 @@ public sealed partial class MainForm : Form
     public bool AllowClose { get; set; }
     public MainForm(Storage storage, AppState state, WindowsHost host, Catalog catalog, bool preview = false, bool startMinimized = false) {
         this.storage = storage; this.state = state; this.host = host; this.preview = preview;
-        providers = new(storage, catalog, host); coordinator = new(storage, host, catalog.Verify, catalog.ValidateCoexistence);
+        providers = new(storage, catalog, host); coordinator = new(storage, host, catalog.Verify, catalog.ValidateCoexistence, catalog.Get);
         var startHidden = !preview && (startMinimized || state.Startup.StartMinimized);
         if (startHidden) { Opacity = 0; ShowInTaskbar = false; }
         Text = "WSG OpenXR FG Switcher"; Font = new Font("Segoe UI", 10); ClientSize = new Size(1160, 850);
@@ -57,6 +64,9 @@ public sealed partial class MainForm : Form
         foreach (var c in choices.Values) c.CheckedChanged += (_, _) => { if (!loading && c.Checked) ChangeProvider(); };
         method.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
         multiplier.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
+        hybrid.CheckedChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
+        overlayPosition.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
+        versions[ProviderId.Djules].SelectedIndexChanged += (_, _) => { if (!loading) UpdateVersionControls(); };
         keepVector.CheckedChanged += (_, _) => {
             if (loading) return;
             if (keepVector.Checked && loadedGame != null && !loadedGame.ExperimentalAcknowledged) {
@@ -106,9 +116,9 @@ public sealed partial class MainForm : Form
             if (Visible && !state.Startup.ApplyOnLaunch) await CheckVisibleStartupUpdates();
         };
         SetLight(state.LightTheme);
-        foreach (var combo in new[] { method, multiplier, quality, scale, overlayPosition }.Concat(versions.Values))
+        foreach (var combo in new[] { method, multiplier, quality, scale, overlayPosition, overlaySize }.Concat(versions.Values))
             combo.SelectedIndexChanged += (_, _) => { if (!loading) { SaveControls(); UpdateSelection(); } };
-        foreach (var check in new[] { overlay, preferFps, lowerVram, keepVector })
+        foreach (var check in new[] { overlay, preferFps, lowerVram, keepVector, hybrid, hybridDepth, overlayLatency, overlayMultiplier, overlayHybrid })
             check.CheckedChanged += (_, _) => { if (!loading) { SaveControls(); UpdateSelection(); } };
         statusTimer.Tick += (_, _) => PollStatus();
         VisibleChanged += (_, _) => {
@@ -127,7 +137,7 @@ public sealed partial class MainForm : Form
             if (e.Index >= 0 && combo.Items[e.Index] is GamePreset game && combo.Tag is Dictionary<string, string> gameLabels) label = gameLabels.GetValueOrDefault(game.Id, game.Name);
             if (combo.Tag is HashSet<string> installedVersions && installedVersions.Contains(label)) label += " • installed";
             label = label switch { "upper_left" => "Upper left", "upper_right" => "Upper right", "lower_left" => "Lower left", "lower_right" => "Lower right", "off" => "Off", _ => label };
-            label = label switch { "nvidia" => "NVIDIA optical flow", "fidelityfx" => "FidelityFX optical flow", "vectors" => "DLSS motion vectors", "dlss" => "Native DLSS FG", "hybrid" => "DLSS + FidelityFX", "extrapolate" => "Extrapolate", "interpolate" => "Interpolate", "dynamic" => "Dynamic", "auto" => "Auto", "medium" => "Medium", "slow" => "Slow / quality", "fast" => "Fast", "performance" => "Performance", "balanced" => "Balanced", "quality" => "Quality", "50" => "50%", "75" => "75%", "100" => "100%", _ => label };
+            label = label switch { "nvidia" => "NVIDIA optical flow", "fidelityfx" => "FidelityFX optical flow", "vectors" => "DLSS motion vectors", "dlss" => "Native DLSS FG", "hybrid" => "DLSS + FidelityFX", "extrapolate" => "Extrapolate", "interpolate" => "Interpolate", "dynamic" => "Dynamic", "auto" => "Auto", "medium" => "Medium", "slow" => "Slow / quality", "fast" => "Fast", "performance" => "Performance", "balanced" => "Balanced", "quality" => "Quality", "25" => "25%", "50" => "50%", "75" => "75%", "100" => "100%", "big" => "Big", "small" => "Small", _ => label };
             TextRenderer.DrawText(e.Graphics, label, combo.Font, new Rectangle(e.Bounds.X + 5, e.Bounds.Y, e.Bounds.Width - 8, e.Bounds.Height), combo.ForeColor, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
         };
@@ -189,11 +199,14 @@ public sealed partial class MainForm : Form
         method.Items.Clear(); multiplier.Items.Clear(); quality.Items.Clear(); scale.Items.Clear();
         if (id == ProviderId.VectorXR) { method.Items.AddRange(["interpolate", "extrapolate"]); multiplier.Items.AddRange(["dynamic", "auto", "2x", "3x", "4x"]); quality.Items.AddRange(["performance", "balanced", "quality"]); }
         else { method.Items.AddRange(id == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"]); multiplier.Items.AddRange(id == ProviderId.Elliott ? ["2x", "3x", "auto"] : ["2x", "3x"]); quality.Items.AddRange(["fast", "medium", "slow"]); }
-        scale.Items.AddRange(["50", "75", "100"]);
+        scale.Items.AddRange(ModernDjulesSelected() ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
         method.SelectedItem = settings.Method; multiplier.SelectedItem = settings.Multiplier; quality.SelectedItem = settings.Quality; scale.SelectedItem = settings.FlowResolution.ToString();
         overlay.Checked = settings.Overlay; preferFps.Checked = settings.PreferFps; lowerVram.Checked = settings.LowerVram;
         overlayPosition.Items.Clear(); overlayPosition.Items.AddRange(["upper_left", "upper_right", "lower_left", "lower_right", "off"]);
         overlayPosition.SelectedItem = settings.Overlay ? settings.OverlayPosition : "off";
+        hybrid.Checked = settings.Hybrid; hybridDepth.Checked = settings.HybridDepthSearch;
+        overlaySize.Items.Clear(); overlaySize.Items.AddRange(["big", "medium", "small"]); overlaySize.SelectedItem = settings.OverlaySize;
+        overlayLatency.Checked = settings.OverlayLatency; overlayMultiplier.Checked = settings.OverlayMultiplier; overlayHybrid.Checked = settings.OverlayHybridStatus;
         foreach (Control control in new Control[] { method, multiplier, quality }) control.Parent!.Visible = id != ProviderId.Off;
         overlay.Visible = id == ProviderId.VectorXR;
         overlayPosition.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott;
@@ -201,6 +214,17 @@ public sealed partial class MainForm : Form
         preferFps.Visible = lowerVram.Visible = id is ProviderId.Djules or ProviderId.Elliott;
         keepVector.Visible = id != ProviderId.VectorXR; advanced.Visible = id == ProviderId.VectorXR; apply.Enabled = loadedGame != null;
         UpdateCapabilityControls();
+    }
+    bool ModernDjulesSelected() => loadedGame?.Provider == ProviderId.Djules
+        && providers.Catalog.Document.Releases.Any(r => r.Provider == ProviderId.Djules && r.Version == versions[ProviderId.Djules].SelectedItem as string && r.DjulesHybrid);
+    void UpdateVersionControls() {
+        if (loadedGame?.Provider != ProviderId.Djules) return;
+        var wasLoading = loading; loading = true;
+        var resolution = scale.SelectedItem as string ?? "50";
+        scale.Items.Clear(); scale.Items.AddRange(ModernDjulesSelected() ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
+        scale.SelectedItem = scale.Items.Contains(resolution) ? resolution : "50";
+        if (!ModernDjulesSelected()) { hybrid.Checked = false; hybridDepth.Checked = false; }
+        loading = wasLoading; UpdateCapabilityControls();
     }
     void UpdateCapabilityControls() {
         var id = loadedGame?.Provider ?? ProviderId.Off;
@@ -211,6 +235,9 @@ public sealed partial class MainForm : Form
         preferFps.Text = forcedDepth ? "Prefer FPS over latency (required)" : "Prefer FPS over latency";
         quality.Parent!.Visible = id == ProviderId.VectorXR || (id is ProviderId.Djules or ProviderId.Elliott && method.SelectedItem as string == "nvidia");
         scale.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott && !native;
+        djulesOptions.Visible = ModernDjulesSelected();
+        hybridDepth.Enabled = !busy && hybrid.Checked;
+        overlayDetails.Enabled = !busy && overlayPosition.SelectedItem as string != "off";
         setupHint.Text = native ? "Native DLSS requires compatible NVIDIA hardware and game support." : "Choose a mod to edit its settings.";
     }
     void PopulateVersions() {
@@ -220,7 +247,7 @@ public sealed partial class MainForm : Form
             var combo = versions[provider.Id]; combo.Items.Clear();
             combo.Tag = list.Select(i => i.Version).ToHashSet(StringComparer.Ordinal);
             combo.DropDownWidth = 340;
-            foreach (var release in providers.Catalog.Document.Releases.Where(r => r.Provider == provider.Id)) combo.Items.Add(release.Version);
+            foreach (var release in providers.Catalog.Document.Releases.Where(r => r.Provider == provider.Id && providers.Catalog.Supports(r))) combo.Items.Add(release.Version);
             var desired = loadedGame?.Versions.GetValueOrDefault(provider.Id);
             combo.SelectedItem = desired; if (combo.SelectedIndex < 0) combo.SelectedIndex = combo.Items.Count - 1;
             providerStatus[provider.Id].Text = list.Length == 0 ? "Download available" : "Installed";
@@ -239,6 +266,12 @@ public sealed partial class MainForm : Form
             s.Overlay = position != "off"; if (s.Overlay) s.OverlayPosition = position;
         } else if (loadedGame.Provider == ProviderId.VectorXR) s.Overlay = overlay.Checked;
         s.PreferFps = preferFps.Checked; s.LowerVram = lowerVram.Checked;
+        if (loadedGame.Provider == ProviderId.Djules) {
+            s.Hybrid = ModernDjulesSelected() && hybrid.Checked;
+            s.HybridDepthSearch = ModernDjulesSelected() && hybridDepth.Checked;
+            if (overlaySize.SelectedItem is string size) s.OverlaySize = size;
+            s.OverlayLatency = overlayLatency.Checked; s.OverlayMultiplier = overlayMultiplier.Checked; s.OverlayHybridStatus = overlayHybrid.Checked;
+        }
         loadedGame.KeepVectorFeatures = keepVector.Checked;
         foreach (var pair in versions) if (pair.Value.SelectedItem is string version && version != "Not installed") loadedGame.Versions[pair.Key] = version;
         if (!preview) storage.Save(state);
@@ -313,9 +346,23 @@ public sealed partial class MainForm : Form
     async Task CheckUpdates(bool manual, CancellationToken cancellation = default) {
         if (manual) installationDetails.SetExpanded(true);
         updateStatus.Text = "Checking official provider releases…";
-        updateStatus.Text = string.Join(Environment.NewLine, await providers.CheckReleases(cancellation));
+        var catalogNotice = "";
+        try {
+            var changed = await ProviderCatalogUpdates.Refresh(storage, providers.Catalog,
+                () => !IsDisposed && Visible && (!busy || manual) && !coordinator.Busy && !coordinator.RecoveryPending
+                    && !providers.InstallationRecoveryPending && !providers.RemovalRecoveryPending, cancellation);
+            if (changed) {
+                PopulateVersions(); UpdateVersionControls();
+                catalogNotice = "New mod versions are available in the Version lists. Choose one to download and install.\n";
+            }
+        } catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { throw; }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException or FormatException or System.Text.Json.JsonException or InvalidOperationException or OperationCanceledException) {
+            storage.Log("Provider catalog refresh: " + ex.Message);
+            catalogNotice = "Mod list could not refresh; saved versions remain available.\n";
+        }
+        updateStatus.Text = catalogNotice + string.Join(Environment.NewLine, await providers.CheckReleases(cancellation, state));
         if (!manual && (!Visible || cancellation.IsCancellationRequested)) return;
-        if (!AppUpdate.Enabled) { if (manual) SetStatus("Development build: automatic WSG updates are disabled. Provider downloads remain verified by the embedded development catalog."); return; }
+        if (!AppUpdate.Enabled) { if (manual) SetStatus("Development build: WSG app updates are disabled. Signed mod-list updates work independently."); return; }
         var restart = await AppUpdate.CheckAsync(AppContext.BaseDirectory, SetStatus, () => {
             try { host.RequireIdle(state.Games); return (!busy || manual) && !coordinator.Busy && !coordinator.RecoveryPending && !providers.InstallationRecoveryPending && !providers.RemovalRecoveryPending; } catch { return false; }
         }, null!, () => WindowState == FormWindowState.Minimized);

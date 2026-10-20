@@ -87,6 +87,10 @@ public sealed class NotesForm : Form
         if (provider is ProviderId.Djules or ProviderId.Elliott) {
             if (s.Method != "dlss") text += $" • flow {s.FlowResolution}%";
             text += $" • prefer FPS {(s.PreferFps ? "on" : "off")} • reduced VRAM {(s.LowerVram ? "on" : "off")}";
+            if (provider == ProviderId.Djules) {
+                text += $" • Hybrid {(s.Hybrid ? "on" : "off")} • depth search {(s.Hybrid && s.HybridDepthSearch ? "on" : "off")}";
+                if (s.Overlay) text += $" • {s.OverlayPosition} / {s.OverlaySize} • latency {(s.OverlayLatency ? "on" : "off")} • multiplier {(s.OverlayMultiplier ? "on" : "off")} • Hybrid status {(s.OverlayHybridStatus ? "on" : "off")}";
+            }
         }
         return text;
     }

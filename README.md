@@ -4,13 +4,13 @@ A Windows x64 desktop app for configuring and switching between djules OFXR,
 elliott OFXR, VectorXR, and Off. Includes WSG dark/light themes, per-game presets,
 guided official downloads, version selection, comparison notes, and recovery.
 
-**Public preview 0.1.0.** Save a different mod, version and settings for each game,
+**Public preview 0.1.1.** Save a different mod, version and settings for each game,
 then apply that game's preset before launching it. One setup is active at a time.
 Headset validation is still pending; no combination is labelled headset-tested.
 Published builds check for signed app updates automatically and install only when
 idle. Updates wait while a game or provider operation is in progress.
 
-[Download the preview](https://github.com/siglr/WSGOpenXRFGSwitcher/releases/tag/v0.1.0)
+[Download the preview](https://github.com/siglr/WSGOpenXRFGSwitcher/releases/tag/v0.1.1)
 · [Website and setup guide](https://wesimglide.org/otherdata/tools/WSG-OpenXR-FG-Switcher.html)
 · [Report a problem](https://github.com/siglr/WSGOpenXRFGSwitcher/issues)
 
@@ -289,11 +289,23 @@ its layer disabled. Its official uninstaller remains available. Recovery does
 not silently uninstall software. Unrecognized changes may require inspecting the
 saved journal and restoring the changed file before automatic recovery can resume.
 
+## djules OFXR 0.2.14.1
+
+The Version list includes the reviewed 0.2.14.1 (V551) ZIP. Under More options,
+this release supports Hybrid with optional depth search, 25% optical-flow input,
+and overlay size, latency, multiplier and Hybrid-status controls. Hybrid is
+independent of the optical-flow backend; it uses supported games' DLSS motion
+vectors and adds GPU work. Both Hybrid options default off. Fresh djules presets
+use FidelityFX; existing presets keep their saved backend. Older djules and
+Elliott versions do not receive these new djules-only controls.
+
 ## Updates and trust
 
 Provider releases are checked at startup and on request. Downloads are restricted
 to official repositories and checked against a signed WSG catalog. New upstream
-versions wait for a reviewed catalog delivered with a WSG update. All bundled
+versions are added through a signed catalog downloaded separately from WSG app
+updates. Compatible mod releases do not require a switcher rebuild. New controls
+or configuration formats may require a newer WSG version. All bundled
 compatibility labels currently remain experimental.
 
 Official builds support authenticated automatic WSG updates while idle, with

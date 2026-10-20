@@ -211,7 +211,7 @@ internal static class AppUpdate
     internal static async Task<bool> CheckForUpdateAsync(string root,Action<string> status,Func<bool> canRestart,Func<Uri,long,byte[]> get,Action launch) {
         try {
             status("Checking for app updates...");var release=await Task.Run(()=>ParseRelease(get(new Uri(Feed),65536)));
-            if(ParseVersion(release.version)<=ParseVersion(ProductVersion.Value)) { status("App is up to date.");return false; }
+            if(ParseVersion(release.version)<=ParseVersion(ProductVersion.Value)) { status("WSG app is up to date. Mod availability is shown in Manage installation.");return false; }
             status("Downloading app v"+release.version+"...");await Task.Run(()=>Prepare(root,release,get));
             if(!canRestart()) { status("Update ready — restart when all games are closed.");return false; }
             status("Updating app and reopening...");launch();return true;

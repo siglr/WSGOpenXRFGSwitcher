@@ -5,8 +5,11 @@ namespace Wsg.OpenXR;
 public static class OfxrConfiguration
 {
     // Preserve unknown keys and sections. The adapter owns only the controls exposed by WSG.
-    public static string Patch(string existing, ProviderId provider, EngineSettings settings) {
+    public static string Patch(string existing, ProviderId provider, EngineSettings settings, CatalogRelease? release = null) {
         Validate(provider, settings);
+        var modernDjules = provider == ProviderId.Djules && release?.DjulesHybrid == true;
+        if (provider == ProviderId.Djules && !modernDjules && (settings.Hybrid || settings.HybridDepthSearch || settings.FlowResolution == 25))
+            throw new InvalidDataException("Hybrid and 25% flow resolution require djules OFXR 0.2.14.1 or a later reviewed version.");
         var values = new Dictionary<string, string> {
             ["backend"] = settings.Method == "fidelityfx" ? "fidelityfx" : "nvidia",
             ["nvidia_preset"] = settings.Quality,
@@ -22,13 +25,27 @@ public static class OfxrConfiguration
             values["dlss_hybrid"] = settings.Method == "hybrid" ? "1" : "0";
             values["extrapolate"] = settings.Method == "extrapolate" ? "1" : "0";
             values["frames_auto"] = settings.Multiplier == "auto" ? "1" : "0";
+        } else {
+            // The forks share tray.ini; never carry Elliott's FG/Auto selection into djules.
+            values["frame_generation"] = "ofxr"; values["motion_vectors"] = "off";
+            values["frames_auto"] = "0"; values["dlss_hybrid"] = "0"; values["extrapolate"] = "0";
+            if (modernDjules) {
+                values["hybrid"] = settings.Hybrid ? "1" : "0";
+                values["hybrid_depth_search"] = settings.Hybrid && settings.HybridDepthSearch ? "1" : "0";
+                values["overlay_size"] = settings.OverlaySize;
+                values["overlay_latency"] = settings.OverlayLatency ? "1" : "0";
+                values["overlay_multiplier"] = settings.OverlayMultiplier ? "1" : "0";
+                values["overlay_hybrid"] = settings.OverlayHybridStatus ? "1" : "0";
+            }
         }
         return PatchSection(existing, "tray", values);
     }
     public static void Validate(ProviderId provider, EngineSettings settings) {
         string[] methods = provider == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"];
         var rates = provider == ProviderId.Elliott ? new[] { "2x", "3x", "auto" } : ["2x", "3x"];
-        if (!methods.Contains(settings.Method) || !rates.Contains(settings.Multiplier) || !new[] { "fast", "medium", "slow" }.Contains(settings.Quality) || !new[] { 50, 75, 100 }.Contains(settings.FlowResolution)
+        var scales = provider == ProviderId.Djules ? new[] { 25, 50, 75, 100 } : [50, 75, 100];
+        if (!methods.Contains(settings.Method) || !rates.Contains(settings.Multiplier) || !new[] { "fast", "medium", "slow" }.Contains(settings.Quality) || !scales.Contains(settings.FlowResolution)
+            || !new[] { "big", "medium", "small" }.Contains(settings.OverlaySize)
             || !new[] { "upper_left", "upper_right", "lower_left", "lower_right" }.Contains(settings.OverlayPosition)) throw new InvalidDataException("Unsupported OFXR settings.");
     }
     public static string PatchSection(string text, string section, Dictionary<string, string> changes) {
