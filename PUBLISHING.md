@@ -91,10 +91,21 @@ Keep new combinations experimental until headset-tested. Then run:
 
     ./tools/prepare-provider-catalog.ps1 -SigningKey <release-key.dpapi> -Revision <increasing-number>
 
-Upload dist/provider-catalog/WSG-OpenXR-FG-Switcher.providers.json to
-https://wesimglide.org/otherdata/tools/. This signs metadata with the established
+Upload both dist/provider-catalog/WSG-OpenXR-FG-Switcher.providers.json and
+WSG-OpenXR-FG-Switcher.providers-v2.json to https://wesimglide.org/otherdata/tools/.
+The legacy feed excludes unknown provider identities for WSG 0.1.1/0.1.2; WSG
+0.1.3+ uses the v2 feed and provider-catalog-v2.signed.json cache. Both use the
+same established signing identity and signature domain. This signs metadata with the established
 product key and performs no app build, provider installation or network upload.
-Commit the reviewed catalog and signed envelope for reproducibility.
+Commit the reviewed catalog and both signed envelopes for reproducibility.
+
+The tig3rmast3r v663 settings contract is `tig3r-v663`; compatible later packages
+can retain that contract and MinimumSwitcherVersion 0.1.3. Review the tagged
+native configuration and route-bank behavior before assigning the contract.
+Its update check includes published prereleases; older providers retain their
+stable-release checks. Do not place Tig3r entries in the legacy feed, even with
+a minimum app version: older clients cannot deserialize the new enum value.
+Leave .htaccess untouched during this release's preparation and upload.
 
 WSG 0.1.1+ refreshes this list on visible startup, on request, and when reopened
 after an hour. It caches verified metadata for offline use and launch scripts.

@@ -1,3 +1,41 @@
+## v0.1.3 — tig3rmast3r OFXR beta
+
+- The official 0.3.0-beta-v663 ZIP (14,003,103 bytes) matches GitHub's SHA-256:
+  `56496815d5e164fb4b6f127bc680d279d55a7eecabd66d37f08351eba33b85b3`.
+  Its complete 34-file inventory is signed in catalog revision 2026102501.
+- 537 core and real-package checks passed. Fixtures cover extraction,
+  identification, repair, removal and interrupted-removal recovery; all 25
+  switching directions; per-game and per-route persistence; preservation of
+  advanced settings; native startup writes, rollback and external-edit guards.
+- The actual released v0.1.2 core accepts the legacy signed feed. The v2 feed
+  and separate cache add Tig3r without changing previously published package
+  identities. Offline use, future compatible catalog-only releases, invalid
+  signatures and rollback rejection passed.
+- 136 settings UI checks passed, including all five cards, both themes, resize,
+  disclosures, native route controls, Applied status and startup selection.
+  The background fixture passed 12 checks; Exit fixtures passed 14 checks.
+- All 41 updater checks passed. The official app-only distribution has automatic
+  updates enabled; all 18 managed files, release signature and ZIP hash verified.
+  Website checks passed at 1440, 768 and 390 pixels, including download metadata,
+  disclosure behavior and failure fallbacks. Defender scans found no threats.
+- Validation uses isolated settings and fake hosts. No upstream binary or MSFS
+  was launched, and no live provider, runtime registration or user preset changed.
+  Real headset testing of this upstream beta remains pending.
+
+## Provider catalog 2026102301 — djules OFXR 0.2.14.2
+
+- Catalog-only update for existing WSG 0.1.1+ clients; app version remains 0.1.2.
+- The official 0.2.14.2 (V557) ZIP matches GitHub's published SHA-256:
+  `d5f36673251b6c9ae3152fc7696de6022dca667ea79ce6a57add5a211b6649c9`.
+  Its tray and both layer DLLs have valid Julien Choulet Authenticode signatures.
+- The default INI is byte-identical to 0.2.14.1, the package layout is unchanged,
+  and the tagged tray changes preserve WSG's existing settings contract.
+- All 429 core and upstream-package checks passed, including identification,
+  installation, repair, paths with spaces and staging cleanup for the real ZIP
+  in isolated fixtures. Existing package identities remain unchanged.
+- No upstream binary or game was launched, and no installed provider, runtime
+  registration or user preset was changed. Headset validation remains pending.
+
 ## v0.1.2 — overlay settings layout
 
 - 100 isolated UI checks passed. FPS overlay Off/position stays in the main

@@ -20,7 +20,14 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
     public bool RecoveryPending => File.Exists(storage.JournalPath);
     public string Fingerprint() {
         var values = host.Layers().OrderBy(r => r.Identity, StringComparer.Ordinal).Select(r => Json.Write(r));
-        return SafeFiles.Hash(Encoding.UTF8.GetBytes(string.Join('\n', values) + "\n" + SafeFiles.HashFile(host.TraySettingsPath) + "\n" + SafeFiles.HashFile(host.VectorSettingsPath) + "\n" + host.RunningTray()));
+        var native = new StringBuilder();
+        foreach (var path in host.Tig3rConfigurationPaths().Where(File.Exists).Order(StringComparer.OrdinalIgnoreCase)) {
+            SafeFiles.NoLinks(path);
+            if (new FileInfo(path).Length > 1024 * 1024) throw new InvalidDataException("A tig3rmast3r configuration is too large.");
+            native.Append('\n').Append(path).Append('\n').Append(SafeFiles.HashFile(path));
+        }
+        // Preserve existing fingerprints until this provider has configuration on disk.
+        return SafeFiles.Hash(Encoding.UTF8.GetBytes(string.Join('\n', values) + "\n" + SafeFiles.HashFile(host.TraySettingsPath) + "\n" + SafeFiles.HashFile(host.VectorSettingsPath) + "\n" + host.RunningTray() + native));
     }
     public async Task Apply(AppState state, GamePreset game, Installation? selected, string observedFingerprint) {
         if (!await gate.WaitAsync(0)) throw new InvalidOperationException("Another operation is in progress.");
@@ -36,7 +43,7 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
             if (game.KeepVectorFeatures || game.Provider == ProviderId.VectorXR) {
                 var vectorInstallation = state.Installations.SingleOrDefault(i => i.Provider == ProviderId.VectorXR) ?? throw new InvalidOperationException("Import or install a catalog-reviewed VectorXR version first.");
                 verifyInstallation(vectorInstallation);
-                if (game.KeepVectorFeatures && selected?.Provider is ProviderId.Djules or ProviderId.Elliott) verifyCoexistence?.Invoke(selected, vectorInstallation);
+                if (game.KeepVectorFeatures && selected != null && ProviderInfo.IsOfxr(selected.Provider)) verifyCoexistence?.Invoke(selected, vectorInstallation);
                 if (layers.Count(r => r.Vector && r.View == 64) != 1) throw new InvalidOperationException("Install or repair VectorXR first. Exactly one 64-bit registration is required.");
                 if (!File.Exists(host.VectorSettingsPath)) throw new InvalidOperationException("Open VectorXR once to initialize its settings, then close it and retry.");
             }
@@ -64,8 +71,33 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
                 AddFile(journal, host.VectorSettingsPath, Encoding.UTF8.GetBytes(patched));
                 AddFile(journal, Path.Combine(storage.Root, "vector-framegen-last.json"), Encoding.UTF8.GetBytes(JsonNode.Parse(patched)!["modules"]!["framegen"]!.ToJsonString()));
             }
-            if (previousTray != null && state.ActiveGameId != null) {
-                AddFile(journal, storage.PresetPath(state.ActiveGameId, previousTray.Provider, previousTray.Version), Read(host.TraySettingsPath));
+            var previousGame = state.AppliedSetup ?? state.Games.FirstOrDefault(g => g.Id == state.ActiveGameId);
+            var previousSettings = previousTray?.Provider == ProviderId.Tig3r && previousGame != null
+                ? host.Tig3rGameSettingsPath(previousGame) : host.TraySettingsPath;
+            if (previousTray != null && state.ActiveGameId != null)
+                AddFile(journal, storage.PresetPath(state.ActiveGameId, previousTray.Provider, previousTray.Version), Read(previousSettings));
+            string? nativeTarget = null;
+            string nativeSeed = "";
+            CatalogRelease? nativeRelease = null;
+            var nativeFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (selected?.Provider == ProviderId.Tig3r || previousTray?.Provider == ProviderId.Tig3r) {
+                nativeFiles.Add(host.Tig3rSettingsPath);
+                if (previousTray?.Provider == ProviderId.Tig3r && previousGame != null) nativeFiles.Add(previousSettings);
+                if (selected?.Provider == ProviderId.Tig3r) {
+                    nativeTarget = host.Tig3rGameSettingsPath(game); nativeFiles.Add(nativeTarget);
+                    var preset = storage.PresetPath(game.Id, selected.Provider, selected.Version);
+                    nativeSeed = File.Exists(preset) ? File.ReadAllText(preset) : File.Exists(host.Tig3rSettingsPath) ? File.ReadAllText(host.Tig3rSettingsPath) : "";
+                    nativeRelease = resolveRelease?.Invoke(selected.CatalogKey)
+                        ?? throw new InvalidDataException("Verified tig3rmast3r settings metadata is required.");
+                }
+                foreach (var path in nativeFiles) AddFile(journal, path, Read(path));
+                if (nativeTarget != null) {
+                    if (!File.Exists(host.Tig3rSettingsPath)) AddFile(journal, host.Tig3rSettingsPath,
+                        Encoding.UTF8.GetBytes(Tig3rConfiguration.Patch("", EngineSettings.Defaults(ProviderId.Tig3r))));
+                    var text = File.Exists(nativeTarget) ? File.ReadAllText(nativeTarget) : nativeSeed;
+                    var patched = ProviderAdapters.For(ProviderId.Tig3r).PrepareConfiguration(text, game, true, false, nativeRelease);
+                    AddFile(journal, nativeTarget, Encoding.UTF8.GetBytes(patched));
+                }
             }
             if (selected?.Provider is ProviderId.Djules or ProviderId.Elliott) {
                 var presetPath = storage.PresetPath(game.Id, selected.Provider, selected.Version);
@@ -83,13 +115,36 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
                 for (int i = 0; i < journal.Files.Count; i++) {
                     var f = journal.Files[i];
                     if (f.Path == host.TraySettingsPath) journal.Files[i] = f with { Before = Read(f.Path) };
-                    else if (previousTray != null && state.ActiveGameId != null && f.Path == storage.PresetPath(state.ActiveGameId, previousTray.Provider, previousTray.Version)) journal.Files[i] = f with { After = Read(host.TraySettingsPath) };
+                    else if (previousTray != null && state.ActiveGameId != null && f.Path == storage.PresetPath(state.ActiveGameId, previousTray.Provider, previousTray.Version)) journal.Files[i] = f with { After = Read(previousSettings) };
+                    else if (nativeFiles.Contains(f.Path)) {
+                        var flushed = Read(f.Path);
+                        var after = f.Path == nativeTarget
+                            ? Encoding.UTF8.GetBytes(ProviderAdapters.For(ProviderId.Tig3r).PrepareConfiguration(flushed == null ? nativeSeed : Encoding.UTF8.GetString(flushed), game, true, false, nativeRelease))
+                            : flushed ?? f.After;
+                        journal.Files[i] = f with { Before = flushed, After = after };
+                    }
                 }
                 journal.Phase = "Applying"; SafeFiles.AtomicWrite(storage.JournalPath, Json.Write(journal));
                 host.RequireIdle(state.Games);
                 foreach (var file in journal.Files) { RequireCurrent(file, false); Write(file.Path, file.After); }
                 await host.SetVector(journal.Registry);
-                if (selected?.Provider is ProviderId.Djules or ProviderId.Elliott) { verifyInstallation(selected); await host.StartTray(selected.Executable); }
+                if (selected != null && ProviderInfo.IsOfxr(selected.Provider)) {
+                    verifyInstallation(selected);
+                    try { await host.StartTray(selected.Executable); }
+                    finally {
+                        if (selected.Provider == ProviderId.Tig3r) {
+                            var index = journal.Files.FindIndex(f => f.Path == host.Tig3rSettingsPath);
+                            var global = journal.Files[index]; var actual = Read(global.Path);
+                            // The verified native tray rewrites its own [tray] section at startup.
+                            // Account for that known write, including a failed start, but preserve
+                            // unexpected edits to game/default/advanced configuration.
+                            if (actual != null && global.After != null && Tig3rConfiguration.SameOutsideTray(global.After, actual)) {
+                                journal.Files[index] = global with { After = actual };
+                                SafeFiles.AtomicWrite(storage.JournalPath, Json.Write(journal));
+                            }
+                        }
+                    }
+                }
                 await host.Verify(selected, game.KeepVectorFeatures);
                 state.ActiveGameId = game.Id; state.ActiveProvider = game.Provider;
                 state.AppliedSetup = Json.Read<GamePreset>(Json.Write(game));
@@ -140,7 +195,12 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
     void ValidateJournal(SwitchJournal journal) {
         if (journal.Schema != 1 || journal.Files.Count > 20 || journal.Registry.Count > 16) throw new InvalidDataException("Unknown recovery journal.");
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { host.TraySettingsPath, host.VectorSettingsPath, Path.Combine(storage.Root, "vector-framegen-original.json"), Path.Combine(storage.Root, "vector-framegen-last.json") };
-        foreach (var game in journal.Previous.Games) foreach (var install in journal.Previous.Installations.Where(i => i.Provider is ProviderId.Djules or ProviderId.Elliott)) allowed.Add(storage.PresetPath(game.Id, install.Provider, install.Version));
+        allowed.Add(host.Tig3rSettingsPath);
+        var games = journal.Previous.Games.Concat(journal.Previous.AppliedSetup == null ? [] : new[] { journal.Previous.AppliedSetup });
+        foreach (var game in games) {
+            if (!string.IsNullOrWhiteSpace(game.Executable)) allowed.Add(host.Tig3rGameSettingsPath(game));
+            foreach (var install in journal.Previous.Installations.Where(i => ProviderInfo.IsOfxr(i.Provider))) allowed.Add(storage.PresetPath(game.Id, install.Provider, install.Version));
+        }
         if (journal.Files.Any(f => !allowed.Contains(f.Path)) || journal.Files.Select(f => f.Path).Distinct(StringComparer.OrdinalIgnoreCase).Count() != journal.Files.Count) throw new InvalidDataException("Recovery contains an unexpected file.");
         if (journal.PreviousTray != null) verifyInstallation(journal.PreviousTray);
         if (journal.Registry.Any(c => !c.Before.Vector || c.Before.Key != OpenXrRegistry.OpenXr || c.Before.Value is not (0 or 1) || c.After is not (0 or 1))) throw new InvalidDataException("Recovery contains an unexpected registration.");
@@ -150,7 +210,11 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
         storage.CleanupCompletedOperations();
     }
     static byte[]? Read(string path) { SafeFiles.NoLinks(path); return File.Exists(path) ? File.ReadAllBytes(path) : null; }
-    static void Write(string path, byte[]? bytes) { SafeFiles.NoLinks(path); if (bytes == null) { if (File.Exists(path)) File.Delete(path); } else SafeFiles.AtomicWrite(path, bytes); }
+    static void Write(string path, byte[]? bytes) {
+        SafeFiles.NoLinks(path);
+        if (SafeFiles.HashFile(path) == (bytes == null ? null : SafeFiles.Hash(bytes))) return;
+        if (bytes == null) { if (File.Exists(path)) File.Delete(path); } else SafeFiles.AtomicWrite(path, bytes);
+    }
     static void AddFile(SwitchJournal journal, string path, byte[]? after) {
         var existing = journal.Files.FindIndex(f => f.Path == path);
         if (existing >= 0) journal.Files[existing] = journal.Files[existing] with { After = after };

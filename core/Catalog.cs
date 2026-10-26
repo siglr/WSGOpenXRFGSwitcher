@@ -19,6 +19,8 @@ public sealed record CatalogRelease
     public string Compatibility { get; set; } = "Experimental — headset validation pending";
     public bool NativeDlss { get; set; }
     public bool DjulesHybrid { get; set; }
+    public string SettingsContract { get; set; } = "";
+    public bool Prerelease { get; set; }
     public string MinimumSwitcherVersion { get; set; } = "0.1.0";
     public string Key => Provider + ":" + Version;
 }
@@ -56,7 +58,8 @@ public sealed class Catalog
         }
     }
     static bool IsHash(string value) => value.Length == 64 && value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f');
-    public bool Supports(CatalogRelease release) => Version.Parse(release.MinimumSwitcherVersion) <= SwitcherVersion;
+    public bool Supports(CatalogRelease release) => Version.Parse(release.MinimumSwitcherVersion) <= SwitcherVersion
+        && (release.Provider != ProviderId.Tig3r || release.SettingsContract == Tig3rConfiguration.Contract);
     public CatalogRelease Get(string key) {
         var release = Document.Releases.SingleOrDefault(r => r.Key == key) ?? throw new InvalidDataException("This provider version has not been reviewed by WSG.");
         if (!Supports(release)) throw new InvalidDataException("This mod version needs WSG " + release.MinimumSwitcherVersion + " or newer for its settings. Update WSG first.");

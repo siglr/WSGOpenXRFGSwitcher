@@ -5,10 +5,12 @@ namespace Wsg.OpenXR;
 // Metadata only: a catalog refresh cannot install a mod, write its settings or change layers.
 public static class ProviderCatalogUpdates
 {
-    public const string FileName = "WSG-OpenXR-FG-Switcher.providers.json";
+    public const string FileName = "WSG-OpenXR-FG-Switcher.providers-v2.json";
+    public const string LegacyFileName = "WSG-OpenXR-FG-Switcher.providers.json";
+    public const string CacheFileName = "provider-catalog-v2.signed.json";
     public const string Feed = "https://wesimglide.org/otherdata/tools/" + FileName;
     const int Limit = 6 * 1024 * 1024;
-    static string CachePath(Storage storage) => Path.Combine(storage.Root, "provider-catalog.signed.json");
+    static string CachePath(Storage storage) => Path.Combine(storage.Root, CacheFileName);
     public static void LoadSaved(Storage storage, Catalog catalog) {
         var path = CachePath(storage);
         if (!File.Exists(path)) return;

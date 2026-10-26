@@ -23,7 +23,7 @@ public sealed partial class Storage
                         SafeFiles.NoLinks(path);
                         var name = Path.GetFileName(path);
                         if (folder == "downloads") {
-                            if (Regex.IsMatch(name, @"^(?:(?:Djules|Elliott)-[a-f0-9]{64}\.zip|VectorXR-[a-f0-9]{64}\.exe)$") && File.Exists(path)) DeleteFile(path);
+                            if (Regex.IsMatch(name, @"^(?:(?:Djules|Elliott|Tig3r)-[a-f0-9]{64}\.zip|VectorXR-[a-f0-9]{64}\.exe)$") && File.Exists(path)) DeleteFile(path);
                         } else if (File.Exists(path) && Regex.IsMatch(name, @"^(?:(?:vector-(?:install|post-installer|before-review)-)?\d{8}-\d{6}-\d{7}|vector-version-[a-f0-9]{16})\.json$")) {
                             DeleteFile(path);
                         } else if (Directory.Exists(path) && Regex.IsMatch(name, @"^removed-[a-f0-9]{32}$")) {
@@ -84,7 +84,7 @@ public sealed partial class Storage
             retained.Add(provider + "-" + SafeFiles.Hash(System.Text.Encoding.UTF8.GetBytes(version))[..16] + ".ini");
         }
         foreach (var install in state.Installations.Where(i => File.Exists(i.Executable))) Keep(install.Provider, install.Version);
-        if (state.ActiveProvider is ProviderId.Djules or ProviderId.Elliott) {
+        if (ProviderInfo.IsOfxr(state.ActiveProvider)) {
             var active = state.AppliedSetup ?? state.Games.FirstOrDefault(g => g.Id == state.ActiveGameId);
             if (active?.Versions.GetValueOrDefault(state.ActiveProvider) is string version) Keep(state.ActiveProvider, version);
             else return; // Unknown active version: preserve presets until the setup is reconciled.
@@ -94,7 +94,7 @@ public sealed partial class Storage
             SafeFiles.NoLinks(directory);
             foreach (var path in Directory.EnumerateFiles(directory)) {
                 var name = Path.GetFileName(path);
-                if (!Regex.IsMatch(name, @"^(Djules|Elliott)(-[a-f0-9]{16})?\.ini$") || retained.Contains(name)) continue;
+                if (!Regex.IsMatch(name, @"^(Djules|Elliott|Tig3r)(-[a-f0-9]{16})?\.ini$") || retained.Contains(name)) continue;
                 deleteFile(path);
             }
             if (!Directory.EnumerateFileSystemEntries(directory).Any()) Directory.Delete(directory, false);

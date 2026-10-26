@@ -1,40 +1,25 @@
 WSG OpenXR FG Switcher — website upload preparation
 
 Destination: https://wesimglide.org/otherdata/tools/
-This folder is prepared locally. Nothing has been uploaded or published.
-The included ZIP is a development preview, not a headset-tested official release.
-Its production automatic-update channel is disabled. Keep that label on the page.
-An official release still requires the steps in PUBLISHING.md.
+Official packages use the signed automatic app-update channel. Headset acceptance
+remains pending; preserve the preview/Beta wording on the page.
 
 Upload in this order:
-1. WSG-OpenXR-FG-Switcher.zip
-2. tools.css, openxr.css, openxr.js, and the contents of assets/
-3. WSG-OpenXR-FG-Switcher.html and index.html
-4. Merge the supplied .htaccess rules into the server's existing file.
-   Preserve any other hosting rules; do not replace the whole server directory.
-5. WSG-OpenXR-FG-Switcher.version.json LAST, after the matching ZIP.
+1. WSG-OpenXR-FG-Switcher.zip and WSG-OpenXR-FG-Switcher.zip.sha256
+2. WSG-OpenXR-FG-Switcher.providers.json (legacy clients) and
+   WSG-OpenXR-FG-Switcher.providers-v2.json (WSG 0.1.3+)
+3. Changed website assets and WSG-OpenXR-FG-Switcher.html
+4. WSG-OpenXR-FG-Switcher.version.json LAST, after verifying the matching ZIP.
 
-Keep the existing Glass Cockpit Refresh and Stream Feeder pages, ZIPs, feeds,
-scripts and assets on the server. This folder adds OpenXR and updates the shared
-index; it does not contain or replace the other tools' downloads or detail pages.
-The shared assets are included so the new index can use all three screenshots.
-UPLOAD-INSTRUCTIONS.txt does not need uploading.
+Leave .htaccess alone. Preserve the other tools' files and the shared index's
+location. Upload index.html only when its owner source was intentionally changed.
+Do not upload this instruction file, signing keys, source/build tools, user data,
+test fixtures, or the rest of dist/. Select only the listed public artifacts.
 
-After upload, check all three index cards and the OpenXR download. Check that
-its displayed version, ZIP size and SHA-256 match the metadata and downloaded ZIP.
-Pages/assets should revalidate; the ZIP and metadata should send Cache-Control:
-no-store. The Copy SHA-256 button requires HTTPS (or localhost).
+Verify the live ZIP hash, both signed catalogs, app version metadata and page.
+Provider-only updates replace both catalogs; they do not replace the app ZIP or
+version feed. The legacy catalog must exclude providers unknown to older clients.
 
-For the next preview, run package.ps1 then tools/prepare-web.ps1. The latter
-uses dist/latest-package.txt and verifies the signed package before copying it.
-It reuses dist/website instead of retaining older website bundles.
-
-Sources: OpenXR page/JS/CSS/image in this project's web/ folder. The shared
-index.html, tools.css, .htaccess and other screenshots belong to the Stream Feeder
-project's web/ folder. That index has also been updated in place so future
-Stream Feeder website preparation keeps the OpenXR card.
-
-Do not upload private signing keys, source code, build tools, application data,
-test fixtures or the rest of dist/.
-
-Provider-only updates: upload WSG-OpenXR-FG-Switcher.providers.json to this same folder. WSG 0.1.1+ downloads the signed mod list independently of application releases. Keep the existing app ZIP and version feed when publishing only a provider catalog.
+Sources: this project's web/ folder; the shared index and tools.css remain owned
+by C:\WSG Stream Feeder\web. prepare-web.ps1 reuses dist/website and verifies
+the latest package before copying it. It does not copy or edit .htaccess.

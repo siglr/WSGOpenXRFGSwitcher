@@ -114,6 +114,9 @@ public interface ISwitchHost
 {
     string TraySettingsPath { get; }
     string VectorSettingsPath { get; }
+    string Tig3rSettingsPath => Path.Combine(Path.GetDirectoryName(TraySettingsPath)!, "tig3r", "ofxr-bridge.ini");
+    string Tig3rGameSettingsPath(GamePreset game) => Tig3rConfiguration.GamePath(Tig3rSettingsPath, game.Executable);
+    IEnumerable<string> Tig3rConfigurationPaths() => new[] { Tig3rSettingsPath }.Concat(Tig3rConfiguration.Profiles(Tig3rSettingsPath));
     IReadOnlyList<LayerRegistration> Layers();
     void RequireIdle(IEnumerable<GamePreset> games);
     string? RunningTray();
@@ -126,6 +129,13 @@ public sealed class WindowsHost : ISwitchHost
 {
     Process? startingTray;
     public string TraySettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OFXR Bridge", "tray.ini");
+    public string Tig3rSettingsPath {
+        get {
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OFXR_BRIDGE_PROFILE_DIR")))
+                throw new InvalidOperationException("A custom OFXR_BRIDGE_PROFILE_DIR is set. Remove the override before WSG manages tig3rmast3r OFXR.");
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ofxr-bridge", "ofxr-bridge.ini");
+        }
+    }
     public string VectorSettingsPath {
         get {
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("VECTORXR_CONFIG_PATH"))) throw new InvalidOperationException("A custom VECTORXR_CONFIG_PATH is set. Remove the override before WSG manages VectorXR.");
@@ -134,6 +144,7 @@ public sealed class WindowsHost : ISwitchHost
     }
     public IReadOnlyList<LayerRegistration> Layers() => OpenXrRegistry.Read();
     public void RequireIdle(IEnumerable<GamePreset> games) {
+        if (Tig3rSettingsEditorOpen()) throw new InvalidOperationException("Close tig3rmast3r's settings window and Rescan setup before applying here.");
         var names = games.Select(g => Path.GetFileNameWithoutExtension(g.Executable)).Where(n => n.Length > 0).Append("FlightSimulator2024").Append("FlightSimulator").ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var process in Process.GetProcesses()) using (process) {
             var blocker = ProcessInspection.IdleBlockReason(process.Id, () => process.ProcessName,
@@ -173,6 +184,19 @@ public sealed class WindowsHost : ISwitchHost
             return true;
         }, IntPtr.Zero);
         return result;
+    }
+    static bool Tig3rSettingsEditorOpen() {
+        var open = false;
+        EnumWindows((window, _) => {
+            var name = new StringBuilder(256); GetClassName(window, name, name.Capacity);
+            if (name.ToString() == "OFXRBridgeSettingsV449") {
+                GetWindowThreadProcessId(window, out var pid);
+                using var process = FindProcess((int)pid);
+                if (process != null && ProcessInspection.Read(() => process.ProcessName)?.Equals("OFXRBridgeTray", StringComparison.OrdinalIgnoreCase) == true) { open = true; return false; }
+            }
+            return true;
+        }, IntPtr.Zero);
+        return open;
     }
     public async Task StopTray() {
         if (startingTray != null && !startingTray.HasExited && !TrayWindows().ContainsKey(startingTray.Id))
@@ -215,7 +239,7 @@ public sealed class WindowsHost : ISwitchHost
         OpenXrRegistry.SetVectorBatch(changes.Where(c => c.Before.Hive == "User").ToArray());
     }
     public async Task Verify(Installation? installation, bool keepVector) {
-        var ofxr = installation?.Provider is ProviderId.Djules or ProviderId.Elliott;
+        var ofxr = installation != null && ProviderInfo.IsOfxr(installation.Provider);
         var vector = installation?.Provider == ProviderId.VectorXR || keepVector;
         for (var attempt = 0; attempt < 30; attempt++) {
             var layers = Layers(); var xr = layers.Where(r => r.Ofxr && r.Enabled && r.Key == OpenXrRegistry.OpenXr).ToArray();

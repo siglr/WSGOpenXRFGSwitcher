@@ -1,7 +1,7 @@
 # WSG OpenXR FG Switcher
 
 A Windows x64 desktop app for configuring and switching between djules OFXR,
-elliott OFXR, VectorXR, and Off. Includes WSG dark/light themes, per-game presets,
+elliott OFXR, tig3rmast3r OFXR, VectorXR, and Off. Includes WSG dark/light themes, per-game presets,
 guided official downloads, version selection, comparison notes, and recovery.
 
 **Public preview 0.1.1.** Save a different mod, version and settings for each game,
@@ -59,7 +59,7 @@ Alternatively, explicitly choose a saved game and provider:
 "WSG OpenXR FG Switcher.exe" --game "Microsoft Flight Simulator 2024" --provider djules
 ```
 
-Providers: `off`, `djules`, `elliott`, `vectorxr`. Game selection accepts the exact
+Providers: `off`, `djules`, `elliott`, `tig3r` (also `tig3rmast3r`), `vectorxr`. Game selection accepts the exact
 preset name, executable path, or preset ID. Ambiguous names are rejected. The
 command uses the saved version; it never downloads or substitutes a version.
 Use either `--apply-default` or `--game` with `--provider`. Combining an apply
@@ -86,7 +86,7 @@ queued Exit retain only the checks needed to complete those operations.
    the same filename cannot have independent VectorXR matching.
 2. Select a mod to reveal its settings and version. Use **Download & install**, or **Find existing install** to import an
    existing installation. Only releases matching the signed compatibility catalog
-   are accepted. The original tig3rmast3r fork is not treated as djules.
+   are accepted. tig3rmast3r uses its own provider identity and native per-game settings; it is not treated as djules.
 3. For VectorXR, complete its official installer and leave its app closed. WSG
    verifies its Windows publisher and registration. If the installer opened
    VectorXR, close it and choose **Finish setup** to finish onboarding. The official
@@ -240,7 +240,7 @@ using its official installer if needed.
 
 WSG game choices and test notes remain available after removal. Temporary recovery
 copies and presets for uninstalled, inactive versions are cleaned up. To remove all
-three mods, repeat the action for each installed OFXR version and for VectorXR.
+four mods, repeat the action for each installed OFXR version and for VectorXR.
 No removal occurs merely by selecting a card.
 
 ## Versions, notes, and recovery
@@ -289,9 +289,25 @@ its layer disabled. Its official uninstaller remains available. Recovery does
 not silently uninstall software. Unrecognized changes may require inspecting the
 saved journal and restoring the changed file before automatic recovery can resume.
 
-## djules OFXR 0.2.14.1
+## tig3rmast3r OFXR 0.3.0 beta (v663)
 
-The Version list includes the reviewed 0.2.14.1 (V551) ZIP. Under More options,
+The fifth tab manages the main settings in native executable-based profiles under
+`%LOCALAPPDATA%\ofxr-bridge\Profiles`. Its seven modes keep separate preferences.
+WSG preserves other native tuning; F10 opens advanced settings while playing.
+**Provider settings…** opens the actual desktop editor without arming the layer;
+desktop edits change defaults when no game is active. Close that editor and use
+Rescan setup before applying through WSG.
+
+Fresh presets use NVIDIA OFXR 0.3.0, Medium, 50% flow resolution, 2X, Fast mode
+off and the bottom FPS counter. Hybrid and FSR 3.1 require compatible DLSS game
+inputs. Native DLSS-G additionally requires compatible NVIDIA hardware; its 3X
+option can fall back to 2X when multi-frame generation is unavailable. The other
+3X choice belongs to the bundled OFXR 0.2.13 mode. Neither optional neural-rendering
+models nor the separate Assetto Corsa add-on are downloaded by WSG.
+
+## djules OFXR 0.2.14.1 / 0.2.14.2
+
+The Version list includes reviewed 0.2.14.1 (V551) and 0.2.14.2 (V557) ZIPs. Under More options,
 this release supports Hybrid with optional depth search, 25% optical-flow input,
 and overlay size, latency, multiplier and Hybrid-status controls. Hybrid is
 independent of the optical-flow backend; it uses supported games' DLSS motion
@@ -304,7 +320,9 @@ Elliott versions do not receive these new djules-only controls.
 Provider releases are checked at startup and on request. Downloads are restricted
 to official repositories and checked against a signed WSG catalog. New upstream
 versions are added through a signed catalog downloaded separately from WSG app
-updates. Compatible mod releases do not require a switcher rebuild. New controls
+updates. WSG 0.1.3+ uses a separate v2 feed and cache; the legacy feed continues
+to support older switchers without exposing unknown provider identities.
+Compatible mod releases do not require a switcher rebuild. New controls
 or configuration formats may require a newer WSG version. All bundled
 compatibility labels currently remain experimental.
 

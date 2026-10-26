@@ -11,7 +11,7 @@ public sealed partial class MainForm
     readonly Label currentDetail = TextLabel("", 10);
     readonly Label settingsHeading = TextLabel("Mod settings", 15, true);
     readonly Label pendingHint = TextLabel("", 10);
-    readonly Label offHint = TextLabel("Turn off frame generation from all three managed mods for a baseline test.", 10);
+    readonly Label offHint = TextLabel("Turn off frame generation from all managed mods for a baseline test.", 10);
     readonly Label installLocation = TextLabel("", 9);
     readonly Label providerUpdateHint = TextLabel("", 9);
     readonly Label vectorProfile = TextLabel("", 9);
@@ -62,15 +62,16 @@ public sealed partial class MainForm
         games.Width = 360; games.AccessibleName = "Game preset"; gameLine.Controls.Add(games);
         var add = Button("Add game…"); AlignInlineButton(add, games); add.Click += (_, _) => AddGame(); gameLine.Controls.Add(add); Row(gameLine);
         Row(setupHint);
-        var cards = new TableLayoutPanel { ColumnCount = 4, RowCount = 1, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 4, 0, 12) };
+        var ids = ProviderInfo.DisplayOrder;
+        var cards = new TableLayoutPanel { ColumnCount = ids.Length, RowCount = 1, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Margin = new Padding(0, 4, 0, 12) };
         cards.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        var ids = new[] { ProviderId.Djules, ProviderId.Elliott, ProviderId.VectorXR, ProviderId.Off };
         for (int i = 0; i < ids.Length; i++) {
-            var id = ids[i]; cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
-            var card = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, Padding = new Padding(0), Margin = new Padding(i == 0 ? 0 : 5, 0, i == 3 ? 0 : 5, 0) };
+            var id = ids[i]; cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / ids.Length));
+            var card = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1, RowCount = 2, Padding = new Padding(0), Margin = new Padding(i == 0 ? 0 : 5, 0, i == ids.Length - 1 ? 0 : 5, 0) };
             card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             card.RowStyles.Add(new RowStyle(SizeType.Absolute, 52)); card.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             var radio = new ThemeRadioButton { Text = ProviderInfo.NameOf(id), Appearance = Appearance.Button, FlatStyle = FlatStyle.Flat, TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), Margin = Padding.Empty, Cursor = Cursors.Hand, AccessibleName = "Select " + ProviderInfo.NameOf(id) };
+            if (id == ProviderId.Tig3r) radio.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             choices[id] = radio; card.Controls.Add(radio, 0, 0);
             var info = new WrappingLabel { Text = id == ProviderId.Off ? "Baseline test" : "Not installed", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, Font = new Font("Segoe UI", 9, FontStyle.Bold), Padding = new Padding(0, 6, 0, 6), Margin = Padding.Empty };
             providerStatus[id] = info; card.Controls.Add(info, 0, 1); cards.Controls.Add(card, i, 0);
@@ -205,17 +206,25 @@ public sealed partial class MainForm
         var same = SetupSelection.MatchesApplied(state, loadedGame, appliedVerified);
         foreach (var pair in versionRows) pair.Value.Visible = pair.Key == selected;
         settingsHeading.Text = selected == ProviderId.Off ? "Off • baseline setup" : ProviderInfo.NameOf(selected) + " settings";
-        vectorProfile.Visible = selected == ProviderId.VectorXR;
+        if (SelectedRelease()?.Prerelease == true) settingsHeading.Text += " • Beta";
+        vectorProfile.Visible = selected is ProviderId.VectorXR or ProviderId.Tig3r;
         vectorProfile.Text = loadedGame == null ? "Add a game preset to create its VectorXR profile."
             : "Game profile: " + loadedGame.Name + "\nExecutable: " + Path.GetFileName(loadedGame.Executable)
                 + "\nLocation: " + Path.GetDirectoryName(loadedGame.Executable);
         hints.SetToolTip(vectorProfile, "Apply creates or updates this game's FG profile. VectorXR matches the executable name, not the folder.");
+        if (selected == ProviderId.Tig3r) {
+            vectorProfile.Text = loadedGame == null ? "Add a game preset to create its tig3rmast3r profile."
+                : "Game profile: " + Path.GetFileName(loadedGame.Executable) + " • Saved separately for this game";
+            hints.SetToolTip(vectorProfile, "Apply updates the native executable-based profile. Advanced settings are preserved. Desktop provider settings edit defaults; F10 edits the running game's profile.");
+        }
         installationDetails.SetTitle(selected == ProviderId.Off ? "Setup details" : "Manage installation");
         moreOptions.Visible = selected != ProviderId.VectorXR;
         moreOptions.SetTitle("More options" + (loadedGame?.KeepVectorFeatures == true ? " • VectorXR features on" : ""));
-        advanced.Text = "Start VectorXR app";
-        advanced.Parent!.Visible = selected == ProviderId.VectorXR;
-        hints.SetToolTip(advanced, "Open full settings without applying FG. Close the editor and Rescan setup before applying here.");
+        advanced.Text = selected == ProviderId.Tig3r ? "Provider settings…" : "Start VectorXR app";
+        advanced.Parent!.Visible = selected is ProviderId.VectorXR or ProviderId.Tig3r;
+        hints.SetToolTip(advanced, selected == ProviderId.Tig3r
+            ? "Open the provider's actual desktop settings without arming it. Desktop edits change defaults when no game is active; F10 edits the running game's profile. Close the editor and Rescan before applying in WSG."
+            : "Open full settings without applying FG. Close the editor and Rescan setup before applying here.");
         offHint.Visible = selected == ProviderId.Off;
         coexistHint.Visible = selected != ProviderId.VectorXR;
         foreach (var pair in choices) {
@@ -246,7 +255,7 @@ public sealed partial class MainForm
         apply.Enabled = !busy && !same && conflict == null && loadedGame != null && !missing && !providers.InstallationRecoveryPending && !removalPending && !coordinator.RecoveryPending;
         apply.BackColor = apply.Enabled ? WindowTheme.Accent(state.LightTheme) : WindowTheme.Surface(state.LightTheme);
         apply.ForeColor = apply.Enabled ? (state.LightTheme ? Color.White : WindowTheme.Background(false)) : WindowTheme.Foreground(state.LightTheme);
-        advanced.Enabled = !busy && !missing && selected == ProviderId.VectorXR && !providers.InstallationRecoveryPending && !providers.RemovalRecoveryPending;
+        advanced.Enabled = !busy && !missing && selected is ProviderId.VectorXR or ProviderId.Tig3r && !providers.InstallationRecoveryPending && !providers.RemovalRecoveryPending;
         remove.Visible = selected != ProviderId.Off && !vectorRemovalPending;
         remove.Text = selected == ProviderId.VectorXR ? "Uninstall VectorXR…" : "Remove this version…";
         remove.Enabled = !busy && !missing && selected != ProviderId.Off && !removalPending && !providers.InstallationRecoveryPending && !coordinator.RecoveryPending;

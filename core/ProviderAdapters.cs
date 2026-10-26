@@ -36,8 +36,23 @@ public sealed class VectorAdapter : IProviderAdapter
         if (!new[] { "interpolate", "extrapolate" }.Contains(settings.Method)) throw new InvalidDataException("Unsupported VectorXR method.");
     }
 }
+public sealed class Tig3rAdapter : IProviderAdapter
+{
+    public ProviderId Id => ProviderId.Tig3r;
+    public bool UsesOfficialInstaller => false;
+    public string PrepareConfiguration(string existing, GamePreset game, bool enableFrameGeneration, bool keepOtherFeatures, CatalogRelease? release = null) {
+        ValidateCapabilities(release ?? throw new InvalidDataException("Verified tig3rmast3r settings metadata is required."), game.For(Id));
+        return Tig3rConfiguration.Patch(existing, game.For(Id), enableFrameGeneration);
+    }
+    public void ValidateCapabilities(CatalogRelease release, EngineSettings settings) {
+        if (release.Provider != Id || release.SettingsContract != Tig3rConfiguration.Contract)
+            throw new InvalidDataException("This tig3rmast3r settings format requires a newer WSG version.");
+        if (settings.Method == "dlss" && !release.NativeDlss) throw new InvalidDataException("This release does not include DLSS frame generation.");
+        Tig3rConfiguration.Validate(settings);
+    }
+}
 public static class ProviderAdapters
 {
-    static readonly IProviderAdapter[] Adapters = [new DjulesAdapter(), new ElliottAdapter(), new VectorAdapter()];
+    static readonly IProviderAdapter[] Adapters = [new DjulesAdapter(), new ElliottAdapter(), new VectorAdapter(), new Tig3rAdapter()];
     public static IProviderAdapter For(ProviderId id) => Adapters.Single(a => a.Id == id);
 }

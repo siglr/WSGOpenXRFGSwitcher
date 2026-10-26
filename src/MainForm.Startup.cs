@@ -32,7 +32,7 @@ public sealed partial class MainForm
         game.SelectedItem = state.Games.FirstOrDefault(g => g.Id == state.Startup.GameId) ?? loadedGame;
         Row(game);
         var provider = Combo(); provider.Width = 250; provider.AccessibleName = "Startup provider";
-        var ids = new[] { ProviderId.Off, ProviderId.Djules, ProviderId.Elliott, ProviderId.VectorXR };
+        var ids = new[] { ProviderId.Off }.Concat(ProviderInfo.DisplayOrder.Where(id => id != ProviderId.Off)).ToArray();
         provider.Items.AddRange(ids.Select(ProviderInfo.NameOf).Cast<object>().ToArray());
         provider.SelectedIndex = Array.IndexOf(ids, state.Startup.GameId == null ? loadedGame?.Provider ?? ProviderId.Off : state.Startup.Provider);
         Row(provider);

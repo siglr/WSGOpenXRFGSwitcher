@@ -35,7 +35,7 @@ static class ProviderCatalogTests
         }
         check(await ProviderCatalogUpdates.Refresh(storage, catalog, () => true, download: Download)
             && catalog.Latest(ProviderId.Djules).Version == future.Version, "A signed provider-only update adds a version without rebuilding WSG");
-        var savedPath = Path.Combine(storage.Root, "provider-catalog.signed.json");
+        var savedPath = Path.Combine(storage.Root, ProviderCatalogUpdates.CacheFileName);
         var saved = File.ReadAllBytes(savedPath);
         var offline = new Catalog(Encoding.UTF8.GetString(Sign(initial)), publicKey);
         ProviderCatalogUpdates.LoadSaved(storage, offline);
@@ -82,5 +82,31 @@ static class ProviderCatalogTests
         var fallback = new Catalog(Encoding.UTF8.GetString(Sign(initial)), publicKey);
         ProviderCatalogUpdates.LoadSaved(storage, fallback);
         check(fallback.Document.Revision == 1, "Damaged local cache falls back to the embedded catalog without blocking startup");
+        var nativeStorage = new Storage(Path.Combine(root, "native-catalog"));
+        var nativeCatalog = new Catalog(Encoding.UTF8.GetString(Sign(initial)), publicKey);
+        var native = future with { Provider = ProviderId.Tig3r, Version = "0.3.0-beta-v663", Repository = "tig3rmast3r/OFXR-Bridge",
+            Url = "https://github.com/tig3rmast3r/OFXR-Bridge/releases/download/0.3.0-beta-v663/provider.zip",
+            DjulesHybrid = false, SettingsContract = Tig3rConfiguration.Contract, MinimumSwitcherVersion = "0.1.3" };
+        var nativeDocument = initial with { Revision = 3, Releases = [release, native] };
+        var legacyCache = Path.Combine(nativeStorage.Root, "provider-catalog.signed.json");
+        SafeFiles.AtomicWrite(legacyCache, Sign(initial));
+        check(await ProviderCatalogUpdates.Refresh(nativeStorage, nativeCatalog, () => true, download: (_, _, _) => Task.FromResult(Sign(nativeDocument))),
+            "A new provider can be added through the separate v2 feed");
+        check(File.ReadAllBytes(legacyCache).SequenceEqual(Sign(initial)) && File.Exists(Path.Combine(nativeStorage.Root, ProviderCatalogUpdates.CacheFileName)),
+            "The new cache leaves the old client's cache untouched");
+        var nativeState = new AppState { ProviderRoot = Path.Combine(nativeStorage.Root, "Native Mods") };
+        var nativeHost = new FakeHost(nativeStorage.Root, "{\"version\":3,\"core\":{\"enabled\":false},\"modules\":{\"framegen\":{\"enabled\":false,\"profiles\":[]}},\"applications\":[]}");
+        var nativeManager = new ProviderManager(nativeStorage, nativeCatalog, nativeHost);
+        SafeFiles.AtomicWrite(Path.Combine(nativeStorage.Root, "downloads", "Tig3r-" + native.Sha256 + ".zip"), package);
+        var nativeInstall = await nativeManager.Install(nativeCatalog.Get(native.Key), nativeState, _ => { });
+        var nativeGame = new GamePreset { Executable = gameFile, Name = "Native startup fixture", Provider = ProviderId.Tig3r };
+        nativeGame.Versions[ProviderId.Tig3r] = native.Version; nativeState.Games.Add(nativeGame);
+        await StartupLaunch.Apply(nativeStorage, nativeState, nativeHost, nativeCatalog, nativeGame);
+        check(nativeState.ActiveProvider == ProviderId.Tig3r && nativeHost.RunningTray() == nativeInstall.Executable,
+            "Offline launch-script application can use an installed Tig3r provider");
+        var nextNative = native with { Version = "0.3.0-beta-v664", Url = "https://github.com/tig3rmast3r/OFXR-Bridge/releases/download/0.3.0-beta-v664/provider.zip" };
+        check(await ProviderCatalogUpdates.Refresh(nativeStorage, nativeCatalog, () => true, download: (_, _, _) => Task.FromResult(Sign(nativeDocument with { Revision = 4, Releases = [release, native, nextNative] })))
+            && nativeCatalog.Latest(ProviderId.Tig3r).Version == nextNative.Version,
+            "Future native releases using the same settings contract require only a signed catalog update");
     }
 }

@@ -32,6 +32,43 @@ public sealed partial class MainForm
         state.LastAppliedFingerprint = coordinator.Fingerprint();
         UpdateCurrentSetup();
         Check(!moreOptions.Expanded && !installationDetails.Expanded, "Secondary sections start collapsed");
+        Check(choices.Count == 5 && choices.ContainsKey(ProviderId.Tig3r), "Five provider cards include the new standalone fork");
+        choices[ProviderId.Tig3r].Checked = true;
+        Check(method.Items.Count == 7 && method.SelectedItem as string == "ofxr_new" && lowerVram.Text == "Fast mode" && !lowerVram.Checked,
+            "Tig3r exposes seven modes with native factory defaults");
+        Check(overlayPosition.Items.Count == 7 && overlayPosition.SelectedItem as string == "elliott_bottom" && setupHint.Text.Contains("Beta"),
+            "Beta status and all native FPS-counter positions are visible");
+        moreOptions.SetExpanded(true);
+        Check(!preferFps.Visible && lowerVram.Visible && !djulesOptions.Visible && advanced.Text == "Provider settings…",
+            "Tig3r uses its own performance controls and a real settings action");
+        foreach (var route in Tig3rConfiguration.Routes) {
+            method.SelectedItem = route;
+            Check(multiplier.Items.Count == (Tig3rConfiguration.SupportsThreeX(route) ? 2 : 1), route + " offers only supported multipliers");
+            Check(scale.Parent!.Visible == Tig3rConfiguration.UsesOpticalFlow(route), route + " shows flow controls only when applicable");
+        }
+        method.SelectedItem = "ofxr_djules"; multiplier.SelectedItem = "3x"; quality.SelectedItem = "slow";
+        method.SelectedItem = "ofxr_new";
+        Check(multiplier.SelectedItem as string == "2x" && quality.SelectedItem as string == "medium", "The next mode restores its independent defaults");
+        method.SelectedItem = "ofxr_djules";
+        Check(multiplier.SelectedItem as string == "3x" && quality.SelectedItem as string == "slow", "Returning to a mode restores unsaved native preferences");
+        installationDetails.SetExpanded(true); CheckSectionRows(installationDetails); CheckSectionRows(moreOptions);
+        Check(vectorProfile.Text.Contains("FlightSimulator2024.exe") && !advanced.Enabled, "Native profile identity is shown and launching requires installation");
+        foreach (var light in new[] { false, true }) {
+            SetLight(light); PerformLayout();
+            var cards = choices.Values.OrderBy(c => c.Left).ToArray();
+            Check(cards.All(c => c.Width > 100), "All five cards retain usable widths, light=" + light);
+            var labelSize = TextRenderer.MeasureText(choices[ProviderId.Tig3r].Text, choices[ProviderId.Tig3r].Font,
+                new Size(choices[ProviderId.Tig3r].ClientSize.Width - 10, 0), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            Check(labelSize.Width <= choices[ProviderId.Tig3r].ClientSize.Width - 10 && labelSize.Height <= choices[ProviderId.Tig3r].ClientSize.Height - 6,
+                "Full tig3rmast3r card label fits at compact width, light=" + light);
+            SavePreview(Path.Combine(output, light ? "tig3r-options-light.png" : "tig3r-options-dark.png"));
+        }
+        var activeFixture = new Installation(ProviderId.Tig3r, providers.Catalog.Latest(ProviderId.Tig3r).Version, Path.Combine(output, "display-only"), Path.Combine(output, "display-only", "OFXRBridgeTray.exe"), "fixture");
+        state.Installations.Add(activeFixture); PopulateVersions(); SaveControls();
+        state.ActiveProvider = ProviderId.Tig3r; state.AppliedSetup = Json.Read<GamePreset>(Json.Write(loadedGame)); UpdateCurrentSetup();
+        Check(providerStatus[ProviderId.Tig3r].Text.Contains("APPLIED") && apply.Text == "Already applied", "The new provider has distinct Applied status and no redundant Apply action");
+        state.Installations.Remove(activeFixture); state.ActiveProvider = ProviderId.Off; state.AppliedSetup = null;
+        moreOptions.SetExpanded(false); installationDetails.SetExpanded(false); SetLight(false);
         choices[ProviderId.Djules].Checked = true;
         UpdateSelection();
         runtime.Text = "OpenXR runtime: PiOpenXR_64";
@@ -150,7 +187,7 @@ public sealed partial class MainForm
         Check(!hybrid.Checked && !hybridDepth.Enabled, "Hybrid remains opt-in when returning to the newer version");
         state.Installations.Add(new(ProviderId.Djules, "0.2.13.4", output, Path.Combine(output, "OFXRBridgeTray.exe"), "Djules:0.2.13.4"));
         UpdateSelection();
-        Check(providerUpdateHint.Visible && providerUpdateHint.Text.Contains("0.2.14.1"), "A newer compatible mod is announced next to the version selector");
+        Check(providerUpdateHint.Visible && providerUpdateHint.Text.Contains(providers.Catalog.Latest(ProviderId.Djules).Version), "A newer compatible mod is announced next to the version selector");
         state.Installations.Clear(); UpdateSelection();
         overlayPosition.SelectedItem = "off"; SaveControls();
         SavePreview(Path.Combine(output, "more-options-dark.png"));

@@ -9,5 +9,6 @@
 .openxr-page .section-note{margin-top:20px}
 .openxr-page .button:disabled{opacity:.6;cursor:default}
 .openxr-page .steps li,.openxr-page .metric{min-width:0}
+.openxr-page #providers .metrics{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 @media(max-width:620px){.openxr-page .feature-grid{grid-template-columns:1fr}.openxr-page .feature-card{padding:20px}}
 @media(prefers-reduced-motion:reduce){.openxr-page *{scroll-behavior:auto;transition:none!important}}

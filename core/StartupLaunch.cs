@@ -21,7 +21,8 @@ public sealed record LaunchOptions(bool ApplyDefault = false, string? Game = nul
                     provider = Value().ToLowerInvariant() switch {
                         "off" => ProviderId.Off, "djules" => ProviderId.Djules,
                         "elliott" => ProviderId.Elliott, "vectorxr" => ProviderId.VectorXR,
-                        _ => throw new ArgumentException("Provider must be off, djules, elliott or vectorxr.") };
+                        "tig3r" or "tig3rmast3r" => ProviderId.Tig3r,
+                        _ => throw new ArgumentException("Provider must be off, djules, elliott, vectorxr or tig3r.") };
                     break;
                 case "--result":
                     result = Value();

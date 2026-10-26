@@ -215,6 +215,7 @@ try {
     await SetupTests.Run(root, Check, Reject);
     await SettingsCompatibilityTests.Run(Check, Reject);
     await DjulesReleaseTests.Run(root, Check, Reject);
+    await Tig3rTests.Run(root, Check, Reject);
     await ProviderCatalogTests.Run(root, Check, Reject);
     await StartupTests.Run(root, vector, Check, Reject);
     // Optional read-only verification of pinned upstream packages; never execute providers.
@@ -241,6 +242,12 @@ try {
                 "Official " + r.Provider + " " + r.Version + " ZIP installs and verifies in a root with spaces");
             Check(fixtureHost.Writes == 0 && fixtureHost.RunningTray() == null && !Directory.Exists(Path.Combine(fixtureState.ProviderRoot, ".staging")),
                 "Official ZIP install cleans staging without starting a provider or changing registrations");
+            if (r.Provider == ProviderId.Tig3r) {
+                await fixtureManager.Remove(installed, fixtureState, new SwitchCoordinator(fixtureStorage, fixtureHost, catalog.Verify).Fingerprint(), _ => { });
+                Check(!Directory.Exists(installed.Directory) && fixtureState.Installations.Count == 0
+                    && !fixtureManager.RemovalRecoveryPending && !Directory.EnumerateFiles(fixtureStorage.Root, "*", SearchOption.AllDirectories).Any(f => f.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)),
+                    "Official Tig3r ZIP removal prunes empty folders and completed recovery/download files");
+            }
         }
         Authenticode.RequireDienerTech(Path.Combine(repo, ".research/packages/VectorXR-0.19.2-windows-x64-setup.exe"));
         Check(true, "Official VectorXR Authenticode verified without execution");
@@ -272,7 +279,10 @@ sealed class Fixture
     public Fixture(string root, string vector) {
         Storage = new(root); Host = new(root, vector); Game = new() { Name = "Game", Executable = @"C:\Game.exe" };
         State = new() { Games = [Game], Installations = ProviderInfo.All.Select(p => new Installation(p.Id, "test", root, Path.Combine(root, p.Id + ".exe"), p.Id + ":test")).ToList() };
-        Coordinator = new(Storage, Host, _ => { });
+        Coordinator = new(Storage, Host, _ => { }, resolveRelease: key => {
+            var provider = Enum.Parse<ProviderId>(key.Split(':')[0]);
+            return new CatalogRelease { Provider = provider, Version = "test", SettingsContract = provider == ProviderId.Tig3r ? Tig3rConfiguration.Contract : "", NativeDlss = true };
+        });
     }
     public Task Apply() => Coordinator.Apply(State, Game, Selected, Coordinator.Fingerprint());
 }
@@ -280,7 +290,8 @@ sealed class FakeHost : ISwitchHost
 {
     public string TraySettingsPath { get; }
     public string VectorSettingsPath { get; }
-    public bool GameRunning; public string? Fail; public int Writes;
+    public bool GameRunning, SettingsEditorOpen; public string? Fail; public int Writes;
+    public Action<string>? BeforeStart; public Action? BeforeStop;
     string? running;
     readonly List<LayerRegistration> layers;
     public FakeHost(string root, string vector) {
@@ -291,10 +302,10 @@ sealed class FakeHost : ISwitchHost
     public IReadOnlyList<LayerRegistration> Layers() => layers.ToArray();
     public void AddLayer(LayerRegistration registration) => layers.Add(registration);
     public void ClearVectorLayers() => layers.RemoveAll(r => r.Vector);
-    public void RequireIdle(IEnumerable<GamePreset> games) { if (GameRunning) throw new InvalidOperationException("Game running"); }
+    public void RequireIdle(IEnumerable<GamePreset> games) { if (GameRunning || SettingsEditorOpen) throw new InvalidOperationException("Game or settings editor running"); }
     public string? RunningTray() => running;
-    public Task StopTray() { running = null; layers.RemoveAll(r => r.Ofxr); return Task.CompletedTask; }
-    public Task StartTray(string executable) { Throw("start"); running = executable; layers.Add(new("User", 64, OpenXrRegistry.OpenXr, "ofxr.json", 0, "XR_APILAYER_XRFrameBridge", "layer.dll")); return Task.CompletedTask; }
+    public Task StopTray() { BeforeStop?.Invoke(); running = null; layers.RemoveAll(r => r.Ofxr); return Task.CompletedTask; }
+    public Task StartTray(string executable) { BeforeStart?.Invoke(executable); Throw("start"); running = executable; layers.Add(new("User", 64, OpenXrRegistry.OpenXr, "ofxr.json", 0, "XR_APILAYER_XRFrameBridge", "layer.dll")); return Task.CompletedTask; }
     public Task SetVector(IReadOnlyList<RegistryChange> changes) { Throw("elevation"); foreach (var c in changes) { var index = layers.FindIndex(r => r.Identity == c.Before.Identity); layers[index] = layers[index] with { Value = c.After }; Writes++; } return Task.CompletedTask; }
     public Task Verify(Installation? installation, bool keepVector) { Throw("verify"); return Task.CompletedTask; }
     void Throw(string stage) { if (Fail == stage) { Fail = null; throw new IOException(stage + " failed"); } }

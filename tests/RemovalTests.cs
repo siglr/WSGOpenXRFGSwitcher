@@ -12,6 +12,7 @@ static class RemovalTests
             var bytes = Encoding.UTF8.GetBytes(provider.Id + version);
             releases.Add(new() { Provider = provider.Id, Version = version, Repository = provider.Repository,
                 Url = "https://github.com/" + provider.Repository + "/releases/download/test/package.zip", Sha256 = SafeFiles.Hash(bytes), Size = bytes.Length,
+                SettingsContract = provider.Id == ProviderId.Tig3r ? Tig3rConfiguration.Contract : "",
                 Files = new() { ["OFXRBridgeTray.exe"] = SafeFiles.Hash(bytes), ["layer.dll"] = SafeFiles.Hash(bytes) } });
         }
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(Json.Write(new CompatibilityCatalog(1, Catalog.Product, releases))));
@@ -46,7 +47,7 @@ static class RemovalTests
             return directory;
         }
 
-        foreach (var provider in new[] { ProviderId.Djules, ProviderId.Elliott }) {
+        foreach (var provider in new[] { ProviderId.Djules, ProviderId.Elliott, ProviderId.Tig3r }) {
             var f = Setup("empty-tree-" + provider, provider);
             f.state.ProviderRoot = Path.Combine(root, "empty-tree-" + provider, "OpenXR FG");
             var destination = ProviderPaths.Destination(f.store, f.state, catalog.Get(f.installation.CatalogKey));
@@ -72,7 +73,7 @@ static class RemovalTests
                 "Empty imported installation is removed without climbing into its parent");
         }
 
-        foreach (var provider in new[] { ProviderId.Djules, ProviderId.Elliott }) {
+        foreach (var provider in new[] { ProviderId.Djules, ProviderId.Elliott, ProviderId.Tig3r }) {
             var f = Setup("remove-" + provider, provider);
             var layers = f.host.Layers().ToArray();
             await f.manager.Remove(f.installation, f.state, Fingerprint(f.store, f.host), _ => { });

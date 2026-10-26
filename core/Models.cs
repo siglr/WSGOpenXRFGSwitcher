@@ -3,14 +3,17 @@ using System.Text.Json.Serialization;
 
 namespace Wsg.OpenXR;
 
-public enum ProviderId { Off, Djules, Elliott, VectorXR }
+public enum ProviderId { Off, Djules, Elliott, VectorXR, Tig3r }
 public sealed record ProviderInfo(ProviderId Id, string Name, string Repository)
 {
     public static readonly ProviderInfo[] All = [
         new(ProviderId.Djules, "djules OFXR", "djules75/OFXR-Bridge"),
         new(ProviderId.Elliott, "elliott OFXR", "elliotttate/OFXR-Bridge"),
-        new(ProviderId.VectorXR, "VectorXR", "DienerTech/vectorxr")];
+        new(ProviderId.VectorXR, "VectorXR", "DienerTech/vectorxr"),
+        new(ProviderId.Tig3r, "tig3rmast3r OFXR", "tig3rmast3r/OFXR-Bridge")];
     public static string NameOf(ProviderId id) => All.FirstOrDefault(p => p.Id == id)?.Name ?? "Off";
+    public static bool IsOfxr(ProviderId id) => id is ProviderId.Djules or ProviderId.Elliott or ProviderId.Tig3r;
+    public static ProviderId[] DisplayOrder => [ProviderId.Djules, ProviderId.Elliott, ProviderId.Tig3r, ProviderId.VectorXR, ProviderId.Off];
 }
 public sealed record EngineSettings
 {
@@ -30,7 +33,8 @@ public sealed record EngineSettings
     public bool OverlayHybridStatus { get; set; } = true;
     public static EngineSettings Defaults(ProviderId id) => id == ProviderId.VectorXR
         ? new() { Method = "interpolate", Multiplier = "dynamic", Quality = "balanced" }
-        : id == ProviderId.Djules ? new() { Method = "fidelityfx" } : new();
+        : id == ProviderId.Djules ? new() { Method = "fidelityfx" }
+        : id == ProviderId.Tig3r ? new() { Method = "ofxr_new", LowerVram = false, OverlayPosition = "elliott_bottom" } : new();
 }
 public sealed record GamePreset
 {
@@ -42,7 +46,15 @@ public sealed record GamePreset
     public bool ExperimentalAcknowledged { get; set; }
     public Dictionary<ProviderId, EngineSettings> Settings { get; set; } = new();
     public Dictionary<ProviderId, string> Versions { get; set; } = new();
+    public Dictionary<string, EngineSettings> Tig3rRoutes { get; set; } = new();
     public EngineSettings For(ProviderId id) { if (!Settings.TryGetValue(id, out var value)) Settings[id] = value = EngineSettings.Defaults(id); return value; }
+    public void SelectTig3rRoute(string route) {
+        if (!Tig3rConfiguration.Routes.Contains(route)) throw new InvalidDataException("Unsupported tig3rmast3r generation mode.");
+        var current = For(ProviderId.Tig3r);
+        Tig3rRoutes[current.Method] = current with { };
+        var next = Tig3rRoutes.GetValueOrDefault(route) ?? EngineSettings.Defaults(ProviderId.Tig3r) with { Method = route };
+        Settings[ProviderId.Tig3r] = next with { Overlay = current.Overlay, OverlayPosition = current.OverlayPosition };
+    }
     public override string ToString() => Name;
 }
 public sealed record Installation(ProviderId Provider, string Version, string Directory, string Executable, string CatalogKey);

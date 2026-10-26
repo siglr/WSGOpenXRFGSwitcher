@@ -179,26 +179,42 @@ public sealed partial class ProviderManager(Storage storage, Catalog catalog, IS
         timeout.CancelAfter(TimeSpan.FromSeconds(12));
         var output = await Task.WhenAll(ProviderInfo.All.Select(async provider => {
             try {
-                var bytes = await Downloads.Get(new Uri("https://api.github.com/repos/" + provider.Repository + "/releases/latest"), 2 * 1024 * 1024, timeout.Token);
-                var tag = JsonNode.Parse(bytes)?["tag_name"]?.GetValue<string>();
+                var path = provider.Id == ProviderId.Tig3r ? "/releases?per_page=10" : "/releases/latest";
+                var bytes = await Downloads.Get(new Uri("https://api.github.com/repos/" + provider.Repository + path), 2 * 1024 * 1024, timeout.Token);
+                var tag = ReleaseTag(provider.Id, bytes);
                 var reviewed = catalog.Latest(provider.Id).Version;
                 var needsApp = catalog.Document.Releases.FirstOrDefault(r => r.Provider == provider.Id && r.Version == tag && !catalog.Supports(r));
                 var available = state != null && !state.Installations.Any(i => i.Provider == provider.Id && i.Version == reviewed);
                 return provider.Name + ": " + (needsApp != null ? tag + " needs WSG " + needsApp.MinimumSwitcherVersion + "+ for new settings."
                     : tag == reviewed ? reviewed + (available ? " available — choose it in Version to download." : " is current.")
                     : "New upstream " + tag + " awaiting compatibility review. Downloadable here: " + reviewed + ".");
-            } catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException or System.Text.Json.JsonException) { return provider.Name + ": update check unavailable. Installed versions remain usable."; }
+            } catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException) { return provider.Name + ": update check unavailable. Installed versions remain usable."; }
         }));
         cancellation.ThrowIfCancellationRequested();
         return output.ToList();
     }
     public void OpenAdvanced(Installation installation) {
         catalog.Verify(installation);
+        if (installation.Provider == ProviderId.Tig3r) {
+            var settings = ProcessLaunch.ForFile(installation.Executable, false);
+            settings.ArgumentList.Add("--settings-only"); Process.Start(settings);
+            return;
+        }
         if (installation.Provider != ProviderId.VectorXR) {
             if (!string.Equals(host.RunningTray(), installation.Executable, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Apply this OFXR provider first, then use its icon in the Windows notification area.");
             throw new InvalidOperationException("Right-click the active OFXR icon in the Windows notification area for advanced settings. Refresh WSG after making changes.");
         }
         Process.Start(new ProcessStartInfo(installation.Executable) { UseShellExecute = false, WorkingDirectory = installation.Directory });
+    }
+    public static string ReleaseTag(ProviderId provider, byte[] bytes) {
+        var root = JsonNode.Parse(bytes);
+        if (provider == ProviderId.Tig3r) {
+            var releases = root?.AsArray() ?? throw new InvalidDataException("Missing release list.");
+            return releases.OfType<JsonObject>().Where(r => r["draft"]?.GetValue<bool>() != true)
+                .OrderByDescending(r => DateTimeOffset.TryParse(r["published_at"]?.GetValue<string>(), out var date) ? date : DateTimeOffset.MinValue)
+                .FirstOrDefault()?["tag_name"]?.GetValue<string>() ?? throw new InvalidDataException("No published provider release.");
+        }
+        return root?["tag_name"]?.GetValue<string>() ?? throw new InvalidDataException("Missing provider release tag.");
     }
 }
 public static partial class GameDiscovery

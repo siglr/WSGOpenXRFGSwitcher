@@ -40,7 +40,7 @@ public sealed partial class ProviderManager
             var cleanup = state.AppliedSetup == null ? new GamePreset { Name = "Provider removal" } : Json.Read<GamePreset>(Json.Write(state.AppliedSetup));
             cleanup.KeepVectorFeatures = false;
             Installation? retained = null;
-            if (installation.Provider == ProviderId.VectorXR && cleanup.Provider is ProviderId.Djules or ProviderId.Elliott)
+            if (installation.Provider == ProviderId.VectorXR && ProviderInfo.IsOfxr(cleanup.Provider))
                 retained = state.Installations.FirstOrDefault(i => i.Provider == cleanup.Provider && i.Executable.Equals(running, StringComparison.OrdinalIgnoreCase));
             if (retained == null) cleanup.Provider = ProviderId.Off;
             status("Deactivating the provider before removal…");
@@ -176,7 +176,7 @@ public sealed partial class ProviderManager
         if (!RemovalRecoveryPending) return Task.CompletedTask;
         host.RequireIdle(state.Games);
         var journal = Json.Read<RemovalJournal>(File.ReadAllText(RemovalJournalPath));
-        if (!Guid.TryParseExact(journal.BackupId, "N", out _) || journal.Installation.Provider is not (ProviderId.Djules or ProviderId.Elliott)) throw new InvalidDataException("Unexpected removal recovery record.");
+        if (!Guid.TryParseExact(journal.BackupId, "N", out _) || !ProviderInfo.IsOfxr(journal.Installation.Provider)) throw new InvalidDataException("Unexpected removal recovery record.");
         var release = catalog.Get(journal.Installation.CatalogKey);
         if (release.Provider != journal.Installation.Provider || release.Version != journal.Installation.Version
             || !SafeFiles.Child(journal.Installation.Directory, release.Executable).Equals(journal.Installation.Executable, StringComparison.OrdinalIgnoreCase)

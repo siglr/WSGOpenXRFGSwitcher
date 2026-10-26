@@ -9,8 +9,14 @@ internal sealed class ThemeRadioButton : RadioButton
         using var border = new Pen(FlatAppearance.BorderColor, FlatAppearance.BorderSize);
         e.Graphics.DrawRectangle(border, 1, 1, Width - 2, Height - 2);
         var text = Enabled ? ForeColor : BackColor.GetBrightness() < .5f ? Color.FromArgb(163, 182, 191) : Color.FromArgb(65, 85, 93);
-        TextRenderer.DrawText(e.Graphics, Text, Font, Rectangle.Inflate(ClientRectangle, -5, -3), text,
-            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        var bounds = Rectangle.Inflate(ClientRectangle, -5, -3);
+        var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+        if (TextRenderer.MeasureText(Text, Font).Width > bounds.Width) {
+            flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
+            var size = TextRenderer.MeasureText(e.Graphics, Text, Font, new Size(bounds.Width, 0), flags);
+            bounds.Y += Math.Max(0, (bounds.Height - size.Height) / 2);
+        }
+        TextRenderer.DrawText(e.Graphics, Text, Font, bounds, text, flags);
         if (Focused && ShowFocusCues) ControlPaint.DrawFocusRectangle(e.Graphics, Rectangle.Inflate(ClientRectangle, -5, -5), text, BackColor);
     }
 }

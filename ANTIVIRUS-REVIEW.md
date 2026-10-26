@@ -1,3 +1,19 @@
+# v0.1.3 — October 25, 2026
+
+The release folder and ZIP passed Microsoft Defender custom scans (exit 0,
+no threats). Engine 1.1.26090.9; signatures 1.461.204.0. Antivirus and real-time
+protection remained enabled. No security settings changed or samples uploaded.
+
+ZIP SHA-256:
+`b940b0438bc0a62a2e04c3c0ce5366e8e3dd43cc3ea1e716e46436e60a9090aa`
+
+All 18 managed files and signed package metadata verified. The automatic update
+channel remains enabled. The new provider uses verified upstream ZIPs, an exact
+inventory and the existing graceful tray protocol. Its settings action uses the
+documented settings-only mode. Upstream binaries were never executed during
+validation. WSG remains without Authenticode publisher signing; a clean local
+scan cannot guarantee the absence of other antivirus or SmartScreen warnings.
+
 # v0.1.2 — October 20, 2026
 
 The release folder and ZIP passed Microsoft Defender custom scans (exit 0,

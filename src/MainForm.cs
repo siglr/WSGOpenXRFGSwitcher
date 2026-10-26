@@ -62,11 +62,11 @@ public sealed partial class MainForm : Form
         games.DropDown += (_, _) => SizeGameDropDown();
         games.SelectedIndexChanged += (_, _) => { if (loading) return; SaveControls(); LoadGame(); };
         foreach (var c in choices.Values) c.CheckedChanged += (_, _) => { if (!loading && c.Checked) ChangeProvider(); };
-        method.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
+        method.SelectedIndexChanged += (_, _) => { if (!loading) ChangeGenerationMethod(); };
         multiplier.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
         hybrid.CheckedChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
         overlayPosition.SelectedIndexChanged += (_, _) => { if (!loading) UpdateCapabilityControls(); };
-        versions[ProviderId.Djules].SelectedIndexChanged += (_, _) => { if (!loading) UpdateVersionControls(); };
+        foreach (var version in versions.Values) version.SelectedIndexChanged += (_, _) => { if (!loading) UpdateVersionControls(); };
         keepVector.CheckedChanged += (_, _) => {
             if (loading) return;
             if (keepVector.Checked && loadedGame != null && !loadedGame.ExperimentalAcknowledged) {
@@ -79,7 +79,7 @@ public sealed partial class MainForm : Form
         remove.Click += async (_, _) => await Run(RemoveSelected);
         advanced.Click += async (_, _) => await Run(() => {
             if (preview) throw new InvalidOperationException("UI preview: provider launch is disabled.");
-            if (loadedGame?.Provider != ProviderId.VectorXR) return Task.CompletedTask;
+            if (loadedGame?.Provider is not (ProviderId.VectorXR or ProviderId.Tig3r)) return Task.CompletedTask;
             SaveControls(); providers.OpenAdvanced(SelectedInstallation() ?? throw new InvalidOperationException("Install this provider first."));
             SetStatus("Close the provider editor and Rescan setup before applying here.");
             return Task.CompletedTask;
@@ -136,8 +136,8 @@ public sealed partial class MainForm : Form
             var label = e.Index < 0 ? "" : combo.GetItemText(combo.Items[e.Index]) ?? "";
             if (e.Index >= 0 && combo.Items[e.Index] is GamePreset game && combo.Tag is Dictionary<string, string> gameLabels) label = gameLabels.GetValueOrDefault(game.Id, game.Name);
             if (combo.Tag is HashSet<string> installedVersions && installedVersions.Contains(label)) label += " • installed";
-            label = label switch { "upper_left" => "Upper left", "upper_right" => "Upper right", "lower_left" => "Lower left", "lower_right" => "Lower right", "off" => "Off", _ => label };
-            label = label switch { "nvidia" => "NVIDIA optical flow", "fidelityfx" => "FidelityFX optical flow", "vectors" => "DLSS motion vectors", "dlss" => "Native DLSS FG", "hybrid" => "DLSS + FidelityFX", "extrapolate" => "Extrapolate", "interpolate" => "Interpolate", "dynamic" => "Dynamic", "auto" => "Auto", "medium" => "Medium", "slow" => "Slow / quality", "fast" => "Fast", "performance" => "Performance", "balanced" => "Balanced", "quality" => "Quality", "25" => "25%", "50" => "50%", "75" => "75%", "100" => "100%", "big" => "Big", "small" => "Small", _ => label };
+            label = label switch { "upper_left" => "Upper left", "upper_right" => "Upper right", "lower_left" => "Lower left", "lower_right" => "Lower right", "elliott_controller" => "Controller", "elliott_bottom" => "Bottom", "off" => "Off", "ofxr_reference" => "NVIDIA OFXR 0.2.1", "ofxr_djules" => "NVIDIA OFXR 0.2.13", "ofxr_new" => "NVIDIA OFXR 0.3.0", "fsr3" => "FSR 3.1", _ => label };
+            label = label switch { "nvidia" => "NVIDIA optical flow", "fidelityfx" => "FidelityFX optical flow", "vectors" => "DLSS motion vectors", "dlss" => "Native DLSS FG", "hybrid" => combo.Tag is ProviderId.Tig3r ? "Hybrid (needs DLSS)" : "DLSS + FidelityFX", "extrapolate" => "Extrapolate", "interpolate" => "Interpolate", "dynamic" => "Dynamic", "auto" => "Auto", "medium" => "Medium", "slow" => "Slow / quality", "fast" => "Fast", "performance" => "Performance", "balanced" => "Balanced", "quality" => "Quality", "25" => "25%", "50" => "50%", "75" => "75%", "100" => "100%", "big" => "Big", "small" => "Small", _ => label };
             TextRenderer.DrawText(e.Graphics, label, combo.Font, new Rectangle(e.Bounds.X + 5, e.Bounds.Y, e.Bounds.Width - 8, e.Bounds.Height), combo.ForeColor, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             if ((e.State & DrawItemState.Focus) != 0) e.DrawFocusRectangle();
         };
@@ -196,28 +196,48 @@ public sealed partial class MainForm : Form
     }
     void PopulateSettings() {
         var id = loadedGame?.Provider ?? ProviderId.Off; var settings = loadedGame?.For(id) ?? new();
-        method.Items.Clear(); multiplier.Items.Clear(); quality.Items.Clear(); scale.Items.Clear();
+        method.Items.Clear(); multiplier.Items.Clear(); quality.Items.Clear(); scale.Items.Clear(); method.Tag = id;
         if (id == ProviderId.VectorXR) { method.Items.AddRange(["interpolate", "extrapolate"]); multiplier.Items.AddRange(["dynamic", "auto", "2x", "3x", "4x"]); quality.Items.AddRange(["performance", "balanced", "quality"]); }
-        else { method.Items.AddRange(id == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"]); multiplier.Items.AddRange(id == ProviderId.Elliott ? ["2x", "3x", "auto"] : ["2x", "3x"]); quality.Items.AddRange(["fast", "medium", "slow"]); }
-        scale.Items.AddRange(ModernDjulesSelected() ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
+        else if (id == ProviderId.Tig3r) {
+            method.Items.AddRange(Tig3rConfiguration.Routes.Cast<object>().ToArray());
+            multiplier.Items.AddRange(Tig3rConfiguration.SupportsThreeX(settings.Method) ? ["2x", "3x"] : ["2x"]);
+            quality.Items.AddRange(["fast", "medium", "slow"]);
+        } else { method.Items.AddRange(id == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"]); multiplier.Items.AddRange(id == ProviderId.Elliott ? ["2x", "3x", "auto"] : ["2x", "3x"]); quality.Items.AddRange(["fast", "medium", "slow"]); }
+        method.Width = id == ProviderId.Tig3r ? 240 : 185;
+        scale.Items.AddRange(ModernDjulesSelected() || id == ProviderId.Tig3r ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
         method.SelectedItem = settings.Method; multiplier.SelectedItem = settings.Multiplier; quality.SelectedItem = settings.Quality; scale.SelectedItem = settings.FlowResolution.ToString();
         overlay.Checked = settings.Overlay; preferFps.Checked = settings.PreferFps; lowerVram.Checked = settings.LowerVram;
-        overlayPosition.Items.Clear(); overlayPosition.Items.AddRange(["upper_left", "upper_right", "lower_left", "lower_right", "off"]);
+        overlayPosition.Items.Clear(); overlayPosition.Items.AddRange(id == ProviderId.Tig3r
+            ? Tig3rConfiguration.OverlayPositions.Cast<object>().ToArray() : ["upper_left", "upper_right", "lower_left", "lower_right", "off"]);
         overlayPosition.SelectedItem = settings.Overlay ? settings.OverlayPosition : "off";
         hybrid.Checked = settings.Hybrid; hybridDepth.Checked = settings.HybridDepthSearch;
         overlaySize.Items.Clear(); overlaySize.Items.AddRange(["big", "medium", "small"]); overlaySize.SelectedItem = settings.OverlaySize;
         overlayLatency.Checked = settings.OverlayLatency; overlayMultiplier.Checked = settings.OverlayMultiplier; overlayHybrid.Checked = settings.OverlayHybridStatus;
         foreach (Control control in new Control[] { method, multiplier, quality }) control.Parent!.Visible = id != ProviderId.Off;
         overlay.Visible = id == ProviderId.VectorXR;
-        overlayPosition.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott;
-        scale.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott;
-        preferFps.Visible = lowerVram.Visible = id is ProviderId.Djules or ProviderId.Elliott;
-        keepVector.Visible = id != ProviderId.VectorXR; advanced.Visible = id == ProviderId.VectorXR; apply.Enabled = loadedGame != null;
+        overlayPosition.Parent!.Visible = ProviderInfo.IsOfxr(id);
+        scale.Parent!.Visible = ProviderInfo.IsOfxr(id);
+        preferFps.Visible = id is ProviderId.Djules or ProviderId.Elliott;
+        lowerVram.Visible = ProviderInfo.IsOfxr(id);
+        lowerVram.Text = id == ProviderId.Tig3r ? "Fast mode" : "Reduce VRAM use";
+        hints.SetToolTip(lowerVram, id == ProviderId.Tig3r ? "Uses private synthesis textures and fewer swapchains. Can reduce VRAM or latency; performance varies by mode and game. Has no effect on Luke Ross AFW." : "Use the provider's reduced-VRAM mode.");
+        keepVector.Visible = id != ProviderId.VectorXR; advanced.Visible = id is ProviderId.VectorXR or ProviderId.Tig3r; apply.Enabled = loadedGame != null;
+        UpdateCapabilityControls();
+    }
+    void ChangeGenerationMethod() {
+        if (loadedGame?.Provider == ProviderId.Tig3r && method.SelectedItem is string route) {
+            var previous = loadedGame.For(ProviderId.Tig3r).Method;
+            if (route != previous) {
+                SaveControls(previous); loadedGame.SelectTig3rRoute(route);
+                var wasLoading = loading; loading = true; PopulateSettings(); loading = wasLoading;
+            }
+        }
         UpdateCapabilityControls();
     }
     bool ModernDjulesSelected() => loadedGame?.Provider == ProviderId.Djules
         && providers.Catalog.Document.Releases.Any(r => r.Provider == ProviderId.Djules && r.Version == versions[ProviderId.Djules].SelectedItem as string && r.DjulesHybrid);
     void UpdateVersionControls() {
+        if (loadedGame?.Provider == ProviderId.Tig3r) { UpdateCapabilityControls(); return; }
         if (loadedGame?.Provider != ProviderId.Djules) return;
         var wasLoading = loading; loading = true;
         var resolution = scale.SelectedItem as string ?? "50";
@@ -228,20 +248,24 @@ public sealed partial class MainForm : Form
     }
     void UpdateCapabilityControls() {
         var id = loadedGame?.Provider ?? ProviderId.Off;
-        var native = id == ProviderId.Elliott && method.SelectedItem as string == "dlss";
+        var native = id is ProviderId.Elliott or ProviderId.Tig3r && method.SelectedItem as string == "dlss";
         var forcedDepth = id is ProviderId.Djules or ProviderId.Elliott && multiplier.SelectedItem as string is "3x" or "auto";
         if (forcedDepth) preferFps.Checked = true;
         preferFps.Enabled = !busy && !forcedDepth;
         preferFps.Text = forcedDepth ? "Prefer FPS over latency (required)" : "Prefer FPS over latency";
-        quality.Parent!.Visible = id == ProviderId.VectorXR || (id is ProviderId.Djules or ProviderId.Elliott && method.SelectedItem as string == "nvidia");
-        scale.Parent!.Visible = id is ProviderId.Djules or ProviderId.Elliott && !native;
+        quality.Parent!.Visible = id == ProviderId.VectorXR || id == ProviderId.Tig3r && Tig3rConfiguration.UsesOpticalFlow(method.SelectedItem as string ?? "") || (id is ProviderId.Djules or ProviderId.Elliott && method.SelectedItem as string == "nvidia");
+        scale.Parent!.Visible = id == ProviderId.Tig3r ? Tig3rConfiguration.UsesOpticalFlow(method.SelectedItem as string ?? "") : id is ProviderId.Djules or ProviderId.Elliott && !native;
+        multiplier.Enabled = !busy && (id != ProviderId.Tig3r || Tig3rConfiguration.SupportsThreeX(method.SelectedItem as string ?? ""));
         djulesOptions.Visible = ModernDjulesSelected();
         overlayOptionsHeading.Visible = overlayDetails.Visible = ModernDjulesSelected();
         hybridDepth.Enabled = !busy && hybrid.Checked;
         // Keep the labels readable in both themes while the FPS overlay is off.
         overlaySize.Enabled = overlayLatency.Enabled = overlayMultiplier.Enabled = overlayHybrid.Enabled =
             !busy && overlayPosition.SelectedItem as string != "off";
-        setupHint.Text = native ? "Native DLSS requires compatible NVIDIA hardware and game support." : "Choose a mod to edit its settings.";
+        var beta = SelectedRelease()?.Prerelease == true ? "Beta • " : "";
+        setupHint.Text = id == ProviderId.Tig3r ? beta + (native ? "DLSS-G needs compatible hardware and DLSS inputs; 3X needs supported multi-frame hardware."
+            : method.SelectedItem as string is "hybrid" or "fsr3" ? "This mode needs compatible DLSS game inputs. F10 opens advanced settings."
+            : "F10 opens advanced settings while in game.") : native ? "Native DLSS requires compatible NVIDIA hardware and game support." : "Choose a mod to edit its settings.";
     }
     void PopulateVersions() {
         var wasLoading = loading; loading = true;
@@ -258,14 +282,15 @@ public sealed partial class MainForm : Form
         loading = wasLoading;
         UpdateSelection();
     }
-    void SaveControls() {
+    void SaveControls(string? methodOverride = null) {
         if (loading || loadedGame == null) return;
         var s = loadedGame.For(loadedGame.Provider);
-        if (method.SelectedItem is string m) s.Method = m;
+        if (methodOverride != null) s.Method = methodOverride;
+        else if (method.SelectedItem is string m) s.Method = m;
         if (multiplier.SelectedItem is string rate) s.Multiplier = rate;
         if (quality.SelectedItem is string q) s.Quality = q;
         if (int.TryParse(scale.SelectedItem as string, out var value)) s.FlowResolution = value;
-        if (loadedGame.Provider is ProviderId.Djules or ProviderId.Elliott && overlayPosition.SelectedItem is string position) {
+        if (ProviderInfo.IsOfxr(loadedGame.Provider) && overlayPosition.SelectedItem is string position) {
             s.Overlay = position != "off"; if (s.Overlay) s.OverlayPosition = position;
         } else if (loadedGame.Provider == ProviderId.VectorXR) s.Overlay = overlay.Checked;
         s.PreferFps = preferFps.Checked; s.LowerVram = lowerVram.Checked;
@@ -282,6 +307,10 @@ public sealed partial class MainForm : Form
     Installation? SelectedInstallation() {
         if (loadedGame == null || loadedGame.Provider == ProviderId.Off) return null;
         return state.Installations.FirstOrDefault(i => i.Provider == loadedGame.Provider && i.Version == versions[loadedGame.Provider].SelectedItem as string);
+    }
+    CatalogRelease? SelectedRelease() {
+        var id = loadedGame?.Provider ?? ProviderId.Off;
+        return id == ProviderId.Off ? null : providers.Catalog.Document.Releases.FirstOrDefault(r => r.Provider == id && r.Version == versions[id].SelectedItem as string);
     }
     async Task ApplySelected() {
         if (preview) throw new InvalidOperationException("UI preview: switching is disabled.");

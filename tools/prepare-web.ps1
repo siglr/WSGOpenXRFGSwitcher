@@ -20,7 +20,7 @@ foreach ($name in @('index.html', 'WSG-Stream-Feeder.html')) {
     [IO.File]::WriteAllText($path, $html)
 }
 New-Item -ItemType Directory -Path (Join-Path $destination 'assets') -Force | Out-Null
-foreach ($name in @('index.html', 'tools.css', '.htaccess')) {
+foreach ($name in @('index.html', 'tools.css')) {
     Copy-Item -LiteralPath (Join-Path $SharedWeb $name) -Destination $destination -Force
 }
 foreach ($name in @('wsg-logo.png', 'glass-cockpit-refresh.png', 'wsg-stream-feeder.png')) {
@@ -44,6 +44,7 @@ $html = [regex]::Replace($html, '(?<prefix>(?:src|href)=")(?<asset>tools\.css|op
 # Re-running replaces the same files rather than accumulating dated copies.
 Copy-Item -LiteralPath ($package + '.zip') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.zip') -Force
 Copy-Item -LiteralPath ($package + '.version.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.version.json') -Force
-Copy-Item -LiteralPath (Join-Path $project 'assets/catalog.signed.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.providers.json') -Force
+Copy-Item -LiteralPath (Join-Path $project 'assets/catalog.legacy.signed.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.providers.json') -Force
+Copy-Item -LiteralPath (Join-Path $project 'assets/catalog.signed.json') -Destination (Join-Path $destination 'WSG-OpenXR-FG-Switcher.providers-v2.json') -Force
 [IO.File]::WriteAllText((Join-Path $destination 'WSG-OpenXR-FG-Switcher.zip.sha256'), (Get-FileHash -LiteralPath ($package + '.zip')).Hash.ToLowerInvariant() + '  WSG-OpenXR-FG-Switcher.zip' + [char]10)
 Write-Output "Website upload files prepared: $destination"
