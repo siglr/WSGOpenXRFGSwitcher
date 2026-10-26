@@ -18,6 +18,10 @@
   updates enabled; all 18 managed files, release signature and ZIP hash verified.
   Website checks passed at 1440, 768 and 390 pixels, including download metadata,
   disclosure behavior and failure fallbacks. Defender scans found no threats.
+- Published v0.1.3 on GitHub and WeSimGlide. The live ZIP, checksum, both
+  signed catalog feeds, version metadata, download page, stylesheet and screenshot
+  match the staged files. The version feed was uploaded last after package
+  verification. The public page displays 0.1.3; .htaccess was not changed.
 - Validation uses isolated settings and fake hosts. No upstream binary or MSFS
   was launched, and no live provider, runtime registration or user preset changed.
   Real headset testing of this upstream beta remains pending.
