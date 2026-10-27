@@ -215,6 +215,7 @@ try {
     await SetupTests.Run(root, Check, Reject);
     await SettingsCompatibilityTests.Run(Check, Reject);
     await DjulesReleaseTests.Run(root, Check, Reject);
+    await DjulesFourXTests.Run(root, Check, Reject);
     await Tig3rTests.Run(root, Check, Reject);
     await ProviderCatalogTests.Run(root, Check, Reject);
     await StartupTests.Run(root, vector, Check, Reject);
@@ -292,6 +293,7 @@ sealed class FakeHost : ISwitchHost
     public string VectorSettingsPath { get; }
     public bool GameRunning, SettingsEditorOpen; public string? Fail; public int Writes;
     public Action<string>? BeforeStart; public Action? BeforeStop;
+    public CatalogRelease? LastVerifiedRelease;
     string? running;
     readonly List<LayerRegistration> layers;
     public FakeHost(string root, string vector) {
@@ -307,6 +309,6 @@ sealed class FakeHost : ISwitchHost
     public Task StopTray() { BeforeStop?.Invoke(); running = null; layers.RemoveAll(r => r.Ofxr); return Task.CompletedTask; }
     public Task StartTray(string executable) { BeforeStart?.Invoke(executable); Throw("start"); running = executable; layers.Add(new("User", 64, OpenXrRegistry.OpenXr, "ofxr.json", 0, "XR_APILAYER_XRFrameBridge", "layer.dll")); return Task.CompletedTask; }
     public Task SetVector(IReadOnlyList<RegistryChange> changes) { Throw("elevation"); foreach (var c in changes) { var index = layers.FindIndex(r => r.Identity == c.Before.Identity); layers[index] = layers[index] with { Value = c.After }; Writes++; } return Task.CompletedTask; }
-    public Task Verify(Installation? installation, bool keepVector) { Throw("verify"); return Task.CompletedTask; }
+    public Task Verify(Installation? installation, bool keepVector, CatalogRelease? release = null) { Throw("verify"); LastVerifiedRelease = release; return Task.CompletedTask; }
     void Throw(string stage) { if (Fail == stage) { Fail = null; throw new IOException(stage + " failed"); } }
 }

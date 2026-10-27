@@ -123,7 +123,7 @@ public interface ISwitchHost
     Task StopTray();
     Task StartTray(string executable);
     Task SetVector(IReadOnlyList<RegistryChange> changes);
-    Task Verify(Installation? installation, bool keepVector);
+    Task Verify(Installation? installation, bool keepVector, CatalogRelease? release = null);
 }
 public sealed class WindowsHost : ISwitchHost
 {
@@ -238,24 +238,16 @@ public sealed class WindowsHost : ISwitchHost
         }
         OpenXrRegistry.SetVectorBatch(changes.Where(c => c.Before.Hive == "User").ToArray());
     }
-    public async Task Verify(Installation? installation, bool keepVector) {
+    public async Task Verify(Installation? installation, bool keepVector, CatalogRelease? release = null) {
         var ofxr = installation != null && ProviderInfo.IsOfxr(installation.Provider);
         var vector = installation?.Provider == ProviderId.VectorXR || keepVector;
         for (var attempt = 0; attempt < 30; attempt++) {
             var layers = Layers(); var xr = layers.Where(r => r.Ofxr && r.Enabled && r.Key == OpenXrRegistry.OpenXr).ToArray();
             var vk = layers.Where(r => r.Ofxr && r.Enabled && r.Key == OpenXrRegistry.Vulkan).ToArray();
             var vectors = layers.Where(r => r.Vector && r.Enabled).ToArray();
-            var ready = ofxr ? xr.Length == 1 && vk.Length <= 1 && RunningTray()?.Equals(installation!.Executable, StringComparison.OrdinalIgnoreCase) == true : xr.Length == 0 && vk.Length == 0 && RunningTray() == null;
+            var ready = ofxr ? RunningTray()?.Equals(installation!.Executable, StringComparison.OrdinalIgnoreCase) == true
+                && OfxrActivation.Matches(installation!, layers, release) : xr.Length == 0 && vk.Length == 0 && RunningTray() == null;
             ready &= vector ? vectors.Count(r => r.View == 64) == 1 : vectors.Length == 0;
-            if (ready && ofxr) {
-                // A stale registration for the other fork must never count as success.
-                var expected = Directory.GetFiles(installation!.Directory, "XR_APILAYER_XRFrameBridge_diagnostic.dll", SearchOption.AllDirectories).Single();
-                ready = xr.All(r => SafeFiles.HashFile(r.Library) == SafeFiles.HashFile(expected));
-                if (vk.Length == 1) {
-                    var source = Directory.GetFiles(installation.Directory, "OFXR_vulkan_queue_layer.dll", SearchOption.AllDirectories).SingleOrDefault();
-                    ready &= source != null && SafeFiles.HashFile(vk[0].Library) == SafeFiles.HashFile(source);
-                }
-            }
             if (ready) return;
             await Task.Delay(200);
         }

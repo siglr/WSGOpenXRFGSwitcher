@@ -185,6 +185,25 @@ public sealed partial class MainForm
             && !loadedGame.For(ProviderId.Djules).Hybrid, "Legacy version selection removes unsupported choices");
         versions[ProviderId.Djules].SelectedItem = "0.2.14.1";
         Check(!hybrid.Checked && !hybridDepth.Enabled, "Hybrid remains opt-in when returning to the newer version");
+        versions[ProviderId.Djules].SelectedItem = "0.2.14.3";
+        Check(multiplier.Items.Contains("4x") && hudFix.Visible && !hudFix.Checked, "V577 exposes 4X and opt-in HUD fix");
+        multiplier.SelectedItem = "4x"; hudFix.Checked = true; hybrid.Checked = false; SaveControls();
+        foreach (var light in new[] { false, true }) {
+            SetLight(light); PerformLayout();
+            Check(loadedGame.For(ProviderId.Djules).Multiplier == "4x" && loadedGame.For(ProviderId.Djules).HudFix
+                && preferFps.Checked && !preferFps.Enabled, "4X saves its multiplier and required pipeline, light=" + light);
+            Check(hudFix.Enabled && !hybrid.Checked && !hybridDepth.Enabled, "HUD fix stays independent of Hybrid, light=" + light);
+            CheckSectionRows(moreOptions);
+            SavePreview(Path.Combine(output, light ? "djules-4x-light.png" : "djules-4x-dark.png"));
+        }
+        choices[ProviderId.Elliott].Checked = true;
+        Check(!multiplier.Items.Contains("4x") && !hudFix.Visible, "Elliott does not inherit djules 4X/HUD controls");
+        choices[ProviderId.Djules].Checked = true;
+        Check(multiplier.SelectedItem as string == "4x" && hudFix.Checked, "4X/HUD settings survive changing tabs");
+        versions[ProviderId.Djules].SelectedItem = "0.2.14.2";
+        Check(!multiplier.Items.Contains("4x") && multiplier.SelectedItem as string == "2x" && !hudFix.Visible && !hudFix.Checked,
+            "Selecting older djules restores supported controls and a usable multiplier");
+        versions[ProviderId.Djules].SelectedItem = "0.2.14.1"; SetLight(false);
         state.Installations.Add(new(ProviderId.Djules, "0.2.13.4", output, Path.Combine(output, "OFXRBridgeTray.exe"), "Djules:0.2.13.4"));
         UpdateSelection();
         Check(providerUpdateHint.Visible && providerUpdateHint.Text.Contains(providers.Catalog.Latest(ProviderId.Djules).Version), "A newer compatible mod is announced next to the version selector");

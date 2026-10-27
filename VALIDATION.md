@@ -1,3 +1,27 @@
+## v0.1.4 — djules OFXR 0.2.14.3 (V577)
+
+- Reviewed the tagged native settings reader/writer, 4X controls and x86
+  registration lifecycle. The official 1,939,125-byte ZIP matches GitHub's digest:
+  `bbd1cef21bb317cd68abe010e4d7301056cd2829681786c4c637ef041f62cc20`.
+  All 18 package files are pinned in signed catalog revision 2026102701.
+- 4X writes frame_multiplier=4, triple_frame_gen=1 and deep_pipeline=1.
+  Returning to 2X/3X clears the explicit override. HUD fix is independent of
+  Hybrid and off by default. Existing presets retain their settings.
+- Layer verification checks the signed x64/x86/Vulkan inventories individually,
+  including both OpenXR registrations in the shared HKCU registry view. Duplicate,
+  stale, modified and unreviewed cache DLLs are refused.
+- Real-package extraction, identification, repair and removal passed in isolated
+  folders. Settings, launch scripts, switching, rollback, applied snapshots and
+  the actual released v0.1.3 client's version gate passed. V577 requires WSG 0.1.4;
+  older clients retain 0.2.14.2 as their compatible download.
+- 540 core/package checks, 158 settings UI checks and all 41 updater checks
+  passed. Both themes, multiplier/version changes, HUD independence, resize and
+  disclosure layout were checked. The signed release package and all 18 managed
+  file hashes verified. Defender scans of the release folder and ZIP were clean.
+- The upstream tray, x64 layer and Vulkan DLL have valid Julien Choulet signatures;
+  the upstream x86 DLL is unsigned and pinned by its reviewed package hash.
+  No upstream binary, MSFS or live provider was launched during validation.
+
 ## v0.1.3 — tig3rmast3r OFXR beta
 
 - The official 0.3.0-beta-v663 ZIP (14,003,103 bytes) matches GitHub's SHA-256:

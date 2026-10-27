@@ -26,7 +26,7 @@ public sealed partial class ProviderManager
         if (RemovalRecoveryPending || InstallationRecoveryPending || File.Exists(storage.JournalPath)) throw new InvalidOperationException("Use Recover operation before removing a provider.");
         catalog.Verify(installation);
         if (installation.Provider == ProviderId.VectorXR) Authenticode.RequireDienerTech(Uninstaller(installation));
-        var coordinator = new SwitchCoordinator(storage, host, catalog.Verify, catalog.ValidateCoexistence);
+        var coordinator = new SwitchCoordinator(storage, host, catalog.Verify, catalog.ValidateCoexistence, catalog.Get);
         if (coordinator.Fingerprint() != observedFingerprint) throw new InvalidOperationException("Provider settings changed. Use Rescan setup and review before removing.");
 
         // Capture before cleanup so recovery of an interrupted official uninstall can restore it.

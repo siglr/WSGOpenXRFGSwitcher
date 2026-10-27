@@ -19,6 +19,8 @@ public sealed record CatalogRelease
     public string Compatibility { get; set; } = "Experimental — headset validation pending";
     public bool NativeDlss { get; set; }
     public bool DjulesHybrid { get; set; }
+    public bool DjulesFourX { get; set; }
+    public bool DjulesHudFix { get; set; }
     public string SettingsContract { get; set; } = "";
     public bool Prerelease { get; set; }
     public string MinimumSwitcherVersion { get; set; } = "0.1.0";
@@ -51,6 +53,8 @@ public sealed class Catalog
             var provider = ProviderInfo.All.SingleOrDefault(p => p.Id == r.Provider) ?? throw new InvalidDataException("Unknown catalog provider.");
             if (!seen.Add(r.Key) || r.Repository != provider.Repository || !r.Url.StartsWith("https://github.com/" + provider.Repository + "/releases/download/", StringComparison.Ordinal) || !IsHash(r.Sha256) || r.Size <= 0 || r.Size > 512L * 1024 * 1024) throw new InvalidDataException("Invalid catalog release.");
             if (r.DjulesHybrid && r.Provider != ProviderId.Djules) throw new InvalidDataException("Invalid djules capabilities.");
+            if ((r.DjulesFourX || r.DjulesHudFix) && (r.Provider != ProviderId.Djules || !r.DjulesHybrid))
+                throw new InvalidDataException("Invalid djules 0.2.14.3 capabilities.");
             if (!Version.TryParse(r.MinimumSwitcherVersion, out var minimum) || minimum.Major < 0 || minimum.Build < 0) throw new InvalidDataException("Invalid minimum switcher version.");
             SafeFiles.Child(Path.GetTempPath(), r.Executable);
             foreach (var pair in r.Files) { SafeFiles.Child(Path.GetTempPath(), pair.Key); if (!IsHash(pair.Value)) throw new InvalidDataException("Invalid inventory hash."); }

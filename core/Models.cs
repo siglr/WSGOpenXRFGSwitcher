@@ -27,6 +27,7 @@ public sealed record EngineSettings
     public string OverlayPosition { get; set; } = "upper_right";
     public bool Hybrid { get; set; }
     public bool HybridDepthSearch { get; set; }
+    public bool HudFix { get; set; }
     public string OverlaySize { get; set; } = "big";
     public bool OverlayLatency { get; set; } = true;
     public bool OverlayMultiplier { get; set; } = true;

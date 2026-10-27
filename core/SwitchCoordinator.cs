@@ -145,7 +145,7 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
                         }
                     }
                 }
-                await host.Verify(selected, game.KeepVectorFeatures);
+                await host.Verify(selected, game.KeepVectorFeatures, selected == null ? null : resolveRelease?.Invoke(selected.CatalogKey));
                 state.ActiveGameId = game.Id; state.ActiveProvider = game.Provider;
                 state.AppliedSetup = Json.Read<GamePreset>(Json.Write(game));
                 state.LastAppliedFingerprint = Fingerprint(); storage.Save(state);
@@ -186,7 +186,7 @@ public sealed class SwitchCoordinator(Storage storage, ISwitchHost host, Action<
         foreach (var f in journal.Files.AsEnumerable().Reverse()) { RequireCurrent(f, true); Write(f.Path, f.Before); }
         if (journal.PreviousTray != null) { verifyInstallation(journal.PreviousTray); await host.StartTray(journal.PreviousTray.Executable); }
         // Original VectorXR non-FG use can be active independently of the previous WSG selection.
-        if (journal.PreviousTray != null) await host.Verify(journal.PreviousTray, host.Layers().Any(r => r.Vector && r.Enabled));
+        if (journal.PreviousTray != null) await host.Verify(journal.PreviousTray, host.Layers().Any(r => r.Vector && r.Enabled), resolveRelease?.Invoke(journal.PreviousTray.CatalogKey));
         state.ActiveGameId = journal.Previous.ActiveGameId; state.ActiveProvider = journal.Previous.ActiveProvider;
         state.AppliedSetup = journal.Previous.AppliedSetup;
         state.LastAppliedFingerprint = Fingerprint(); storage.Save(state);

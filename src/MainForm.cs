@@ -15,6 +15,7 @@ public sealed partial class MainForm : Form
     readonly ComboBox games = Combo(), method = Combo(), multiplier = Combo(), quality = Combo(), scale = Combo(), overlayPosition = Combo(), overlaySize = Combo();
     readonly CheckBox hybrid = new ThemeCheckBox() { Text = "Hybrid (DLSS game motion + optical flow)", AutoSize = true };
     readonly CheckBox hybridDepth = new ThemeCheckBox() { Text = "Hybrid depth search", AutoSize = true };
+    readonly CheckBox hudFix = new ThemeCheckBox() { Text = "HUD fix", AutoSize = true };
     readonly CheckBox overlayLatency = new ThemeCheckBox() { Text = "Show latency", AutoSize = true };
     readonly CheckBox overlayMultiplier = new ThemeCheckBox() { Text = "Show multiplier", AutoSize = true };
     readonly CheckBox overlayHybrid = new ThemeCheckBox() { Text = "Show Hybrid status", AutoSize = true };
@@ -118,7 +119,7 @@ public sealed partial class MainForm : Form
         SetLight(state.LightTheme);
         foreach (var combo in new[] { method, multiplier, quality, scale, overlayPosition, overlaySize }.Concat(versions.Values))
             combo.SelectedIndexChanged += (_, _) => { if (!loading) { SaveControls(); UpdateSelection(); } };
-        foreach (var check in new[] { overlay, preferFps, lowerVram, keepVector, hybrid, hybridDepth, overlayLatency, overlayMultiplier, overlayHybrid })
+        foreach (var check in new[] { overlay, preferFps, lowerVram, keepVector, hybrid, hybridDepth, hudFix, overlayLatency, overlayMultiplier, overlayHybrid })
             check.CheckedChanged += (_, _) => { if (!loading) { SaveControls(); UpdateSelection(); } };
         statusTimer.Tick += (_, _) => PollStatus();
         VisibleChanged += (_, _) => {
@@ -202,7 +203,7 @@ public sealed partial class MainForm : Form
             method.Items.AddRange(Tig3rConfiguration.Routes.Cast<object>().ToArray());
             multiplier.Items.AddRange(Tig3rConfiguration.SupportsThreeX(settings.Method) ? ["2x", "3x"] : ["2x"]);
             quality.Items.AddRange(["fast", "medium", "slow"]);
-        } else { method.Items.AddRange(id == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"]); multiplier.Items.AddRange(id == ProviderId.Elliott ? ["2x", "3x", "auto"] : ["2x", "3x"]); quality.Items.AddRange(["fast", "medium", "slow"]); }
+        } else { method.Items.AddRange(id == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"]); multiplier.Items.AddRange(id == ProviderId.Elliott ? ["2x", "3x", "auto"] : DjulesFourXSelected() ? ["2x", "3x", "4x"] : ["2x", "3x"]); quality.Items.AddRange(["fast", "medium", "slow"]); }
         method.Width = id == ProviderId.Tig3r ? 240 : 185;
         scale.Items.AddRange(ModernDjulesSelected() || id == ProviderId.Tig3r ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
         method.SelectedItem = settings.Method; multiplier.SelectedItem = settings.Multiplier; quality.SelectedItem = settings.Quality; scale.SelectedItem = settings.FlowResolution.ToString();
@@ -210,7 +211,7 @@ public sealed partial class MainForm : Form
         overlayPosition.Items.Clear(); overlayPosition.Items.AddRange(id == ProviderId.Tig3r
             ? Tig3rConfiguration.OverlayPositions.Cast<object>().ToArray() : ["upper_left", "upper_right", "lower_left", "lower_right", "off"]);
         overlayPosition.SelectedItem = settings.Overlay ? settings.OverlayPosition : "off";
-        hybrid.Checked = settings.Hybrid; hybridDepth.Checked = settings.HybridDepthSearch;
+        hybrid.Checked = settings.Hybrid; hybridDepth.Checked = settings.HybridDepthSearch; hudFix.Checked = settings.HudFix;
         overlaySize.Items.Clear(); overlaySize.Items.AddRange(["big", "medium", "small"]); overlaySize.SelectedItem = settings.OverlaySize;
         overlayLatency.Checked = settings.OverlayLatency; overlayMultiplier.Checked = settings.OverlayMultiplier; overlayHybrid.Checked = settings.OverlayHybridStatus;
         foreach (Control control in new Control[] { method, multiplier, quality }) control.Parent!.Visible = id != ProviderId.Off;
@@ -236,36 +237,49 @@ public sealed partial class MainForm : Form
     }
     bool ModernDjulesSelected() => loadedGame?.Provider == ProviderId.Djules
         && providers.Catalog.Document.Releases.Any(r => r.Provider == ProviderId.Djules && r.Version == versions[ProviderId.Djules].SelectedItem as string && r.DjulesHybrid);
+    bool DjulesFourXSelected() => loadedGame?.Provider == ProviderId.Djules && SelectedRelease()?.DjulesFourX == true;
+    bool DjulesHudFixSelected() => loadedGame?.Provider == ProviderId.Djules && SelectedRelease()?.DjulesHudFix == true;
     void UpdateVersionControls() {
         if (loadedGame?.Provider == ProviderId.Tig3r) { UpdateCapabilityControls(); return; }
         if (loadedGame?.Provider != ProviderId.Djules) return;
         var wasLoading = loading; loading = true;
         var resolution = scale.SelectedItem as string ?? "50";
+        var rate = multiplier.SelectedItem as string ?? "2x";
+        multiplier.Items.Clear(); multiplier.Items.AddRange(DjulesFourXSelected() ? ["2x", "3x", "4x"] : ["2x", "3x"]);
+        multiplier.SelectedItem = multiplier.Items.Contains(rate) ? rate : "2x";
         scale.Items.Clear(); scale.Items.AddRange(ModernDjulesSelected() ? ["25", "50", "75", "100"] : ["50", "75", "100"]);
         scale.SelectedItem = scale.Items.Contains(resolution) ? resolution : "50";
         if (!ModernDjulesSelected()) { hybrid.Checked = false; hybridDepth.Checked = false; }
+        if (!DjulesHudFixSelected()) hudFix.Checked = false;
         loading = wasLoading; UpdateCapabilityControls();
     }
     void UpdateCapabilityControls() {
         var id = loadedGame?.Provider ?? ProviderId.Off;
         var native = id is ProviderId.Elliott or ProviderId.Tig3r && method.SelectedItem as string == "dlss";
-        var forcedDepth = id is ProviderId.Djules or ProviderId.Elliott && multiplier.SelectedItem as string is "3x" or "auto";
+        var forcedDepth = id is ProviderId.Djules or ProviderId.Elliott && multiplier.SelectedItem as string is "3x" or "4x" or "auto";
         if (forcedDepth) preferFps.Checked = true;
         preferFps.Enabled = !busy && !forcedDepth;
         preferFps.Text = forcedDepth ? "Prefer FPS over latency (required)" : "Prefer FPS over latency";
         quality.Parent!.Visible = id == ProviderId.VectorXR || id == ProviderId.Tig3r && Tig3rConfiguration.UsesOpticalFlow(method.SelectedItem as string ?? "") || (id is ProviderId.Djules or ProviderId.Elliott && method.SelectedItem as string == "nvidia");
         scale.Parent!.Visible = id == ProviderId.Tig3r ? Tig3rConfiguration.UsesOpticalFlow(method.SelectedItem as string ?? "") : id is ProviderId.Djules or ProviderId.Elliott && !native;
         multiplier.Enabled = !busy && (id != ProviderId.Tig3r || Tig3rConfiguration.SupportsThreeX(method.SelectedItem as string ?? ""));
+        hints.SetToolTip(multiplier, id == ProviderId.Djules
+            ? "4X requires djules 0.2.14.3+. Three generated frames per rendered frame; additional GPU/VRAM cost. R.E.A.L. VR games remain at 2X. WSG applies before launch; the provider tray offers live controls."
+            : id == ProviderId.Tig3r ? "3X is available in the OFXR 0.2.13 and DLSS-G modes; DLSS-G needs compatible hardware."
+            : "Choose a multiplier supported by this provider. Apply before launching your game.");
         djulesOptions.Visible = ModernDjulesSelected();
         overlayOptionsHeading.Visible = overlayDetails.Visible = ModernDjulesSelected();
         hybridDepth.Enabled = !busy && hybrid.Checked;
+        hudFix.Visible = DjulesHudFixSelected(); hudFix.Enabled = !busy;
         // Keep the labels readable in both themes while the FPS overlay is off.
         overlaySize.Enabled = overlayLatency.Enabled = overlayMultiplier.Enabled = overlayHybrid.Enabled =
             !busy && overlayPosition.SelectedItem as string != "off";
         var beta = SelectedRelease()?.Prerelease == true ? "Beta • " : "";
         setupHint.Text = id == ProviderId.Tig3r ? beta + (native ? "DLSS-G needs compatible hardware and DLSS inputs; 3X needs supported multi-frame hardware."
             : method.SelectedItem as string is "hybrid" or "fsr3" ? "This mode needs compatible DLSS game inputs. F10 opens advanced settings."
-            : "F10 opens advanced settings while in game.") : native ? "Native DLSS requires compatible NVIDIA hardware and game support." : "Choose a mod to edit its settings.";
+            : "F10 opens advanced settings while in game.") : native ? "Native DLSS requires compatible NVIDIA hardware and game support."
+            : id == ProviderId.Djules && multiplier.SelectedItem as string == "4x" ? "4X generates three frames per rendered frame. R.E.A.L. VR games stay at 2X."
+            : "Choose a mod to edit its settings.";
     }
     void PopulateVersions() {
         var wasLoading = loading; loading = true;
@@ -297,6 +311,7 @@ public sealed partial class MainForm : Form
         if (loadedGame.Provider == ProviderId.Djules) {
             s.Hybrid = ModernDjulesSelected() && hybrid.Checked;
             s.HybridDepthSearch = ModernDjulesSelected() && hybridDepth.Checked;
+            s.HudFix = DjulesHudFixSelected() && hudFix.Checked;
             if (overlaySize.SelectedItem is string size) s.OverlaySize = size;
             s.OverlayLatency = overlayLatency.Checked; s.OverlayMultiplier = overlayMultiplier.Checked; s.OverlayHybridStatus = overlayHybrid.Checked;
         }

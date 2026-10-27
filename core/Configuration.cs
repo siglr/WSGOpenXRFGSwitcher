@@ -8,14 +8,22 @@ public static class OfxrConfiguration
     public static string Patch(string existing, ProviderId provider, EngineSettings settings, CatalogRelease? release = null) {
         Validate(provider, settings);
         var modernDjules = provider == ProviderId.Djules && release?.DjulesHybrid == true;
+        if (settings.Multiplier == "4x" && (provider != ProviderId.Djules || release?.Provider != provider || release.DjulesFourX != true))
+            throw new InvalidDataException("4X requires djules OFXR 0.2.14.3 or a later reviewed version.");
+        if (settings.HudFix && (provider != ProviderId.Djules || release?.Provider != provider || release.DjulesHudFix != true))
+            throw new InvalidDataException("HUD fix requires djules OFXR 0.2.14.3 or a later reviewed version.");
         if (provider == ProviderId.Djules && !modernDjules && (settings.Hybrid || settings.HybridDepthSearch || settings.FlowResolution == 25))
             throw new InvalidDataException("Hybrid and 25% flow resolution require djules OFXR 0.2.14.1 or a later reviewed version.");
         var values = new Dictionary<string, string> {
             ["backend"] = settings.Method == "fidelityfx" ? "fidelityfx" : "nvidia",
             ["nvidia_preset"] = settings.Quality,
             ["nvidia_input_scale"] = settings.FlowResolution.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["deep_pipeline"] = settings.PreferFps || settings.Multiplier is "3x" or "auto" ? "1" : "0",
-            ["triple_frame_gen"] = settings.Multiplier == "3x" ? "1" : "0",
+            ["deep_pipeline"] = settings.PreferFps || settings.Multiplier is "3x" or "4x" or "auto" ? "1" : "0",
+            ["triple_frame_gen"] = settings.Multiplier is "3x" or "4x" ? "1" : "0",
+            // Keep the explicit multiplier consistent when returning from a newer
+            // djules preset. Older forks ignore it; V577 reads it before arming.
+            ["frame_multiplier"] = settings.Multiplier == "4x" ? "4" : settings.Multiplier == "3x" ? "3" : "2",
+            ["hud_fix"] = settings.HudFix ? "1" : "0",
             ["single_swapchain_rings"] = settings.LowerVram ? "1" : "0",
             ["overlay_position"] = settings.Overlay ? settings.OverlayPosition : "off"
         };
@@ -42,7 +50,7 @@ public static class OfxrConfiguration
     }
     public static void Validate(ProviderId provider, EngineSettings settings) {
         string[] methods = provider == ProviderId.Elliott ? ["nvidia", "fidelityfx", "vectors", "dlss", "hybrid", "extrapolate"] : ["nvidia", "fidelityfx"];
-        var rates = provider == ProviderId.Elliott ? new[] { "2x", "3x", "auto" } : ["2x", "3x"];
+        var rates = provider == ProviderId.Elliott ? new[] { "2x", "3x", "auto" } : ["2x", "3x", "4x"];
         var scales = provider == ProviderId.Djules ? new[] { 25, 50, 75, 100 } : [50, 75, 100];
         if (!methods.Contains(settings.Method) || !rates.Contains(settings.Multiplier) || !new[] { "fast", "medium", "slow" }.Contains(settings.Quality) || !scales.Contains(settings.FlowResolution)
             || !new[] { "big", "medium", "small" }.Contains(settings.OverlaySize)

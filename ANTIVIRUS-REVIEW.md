@@ -1,3 +1,21 @@
+# v0.1.4 — October 27, 2026
+
+The release folder and ZIP passed Microsoft Defender custom scans (exit 0,
+no threats). Engine 1.1.26090.9; signatures 1.461.226.0. Antivirus and real-time
+protection remained enabled. No security settings changed or samples uploaded.
+
+ZIP SHA-256:
+`0c010fd793e09f4e752eab600dda9871a33d168644ada451ed009f7a1e18057b`
+
+All 18 managed files and signed package metadata verified. WSG's automatic
+update channel remains enabled. djules 0.2.14.3 downloads are pinned to the
+official ZIP and its complete x64/x86 inventory. Native cache verification uses
+the reviewed hashes for each architecture; no upstream binary was executed.
+The upstream tray, x64 layer and Vulkan DLL are publisher-signed. Its x86 DLL
+is unsigned and verified by the reviewed package hash. WSG itself remains
+without Authenticode publisher signing; local scans do not guarantee clearance
+by other antivirus products or SmartScreen.
+
 # v0.1.3 — October 25, 2026
 
 The release folder and ZIP passed Microsoft Defender custom scans (exit 0,

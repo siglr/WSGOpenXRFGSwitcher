@@ -110,7 +110,7 @@ public sealed partial class MainForm
         var switches = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = new Padding(0, 0, 0, 8) };
         overlay.Text = "Show in-game overlay"; lowerVram.Text = "Reduce VRAM use";
         Row(overlay); switches.Controls.Add(preferFps); switches.Controls.Add(lowerVram); moreOptions.AddRow(switches);
-        djulesOptions.Controls.Add(hybrid); djulesOptions.Controls.Add(hybridDepth);
+        djulesOptions.Controls.Add(hybrid); djulesOptions.Controls.Add(hybridDepth); djulesOptions.Controls.Add(hudFix);
         overlaySize.Width = 140; overlaySize.AccessibleName = "OFXR overlay size";
         var overlaySizeLabel = TextLabel("Size", 9); overlaySizeLabel.Margin = new Padding(0, 8, 8, 0);
         overlayDetails.Controls.Add(overlaySizeLabel); overlayDetails.Controls.Add(overlaySize);
@@ -120,6 +120,7 @@ public sealed partial class MainForm
         hints.SetToolTip(overlayOptionsHeading, "Appearance and information shown by the FPS overlay. Choose a corner in the FPS overlay dropdown above to enable it.");
         hints.SetToolTip(hybrid, "djules 0.2.14.1+: combines a DLSS game's motion vectors with optical flow. Adds GPU work; requires game support. Off by default.");
         hints.SetToolTip(hybridDepth, "Uses game depth to improve thin nearby objects. Requires Hybrid and adds GPU work, especially at high VR resolutions.");
+        hints.SetToolTip(hudFix, "djules 0.2.14.3+: reduces doubled translucent HUDs during stick turns. Works with Hybrid on or off, costs GPU time and is off by default.");
         hints.SetToolTip(scale, "Optical-flow input resolution. Lower values reduce GPU work and motion detail. 25% requires djules 0.2.14.1+. Applies to both optical-flow backends in that release.");
         hints.SetToolTip(overlayHybrid, "The provider's overlay reports HYBRID OK or HYBRID KO in game; selecting Hybrid alone does not prove it is working.");
         moreOptions.AddRow(keepVector); coexistHint.Margin = new Padding(0, 3, 0, 8); moreOptions.AddRow(coexistHint); Row(moreOptions);
@@ -141,7 +142,7 @@ public sealed partial class MainForm
         hints.SetToolTip(setupHint, "Green and Applied mark the verified setup. The blue outline marks the tab you are editing. Selecting a tab does not activate it.");
         hints.SetToolTip(games, "Save a separate provider and settings preset for each game. Only one setup is active at a time.");
         hints.SetToolTip(keepVector, "Retain enhancements such as Pivot with OFXR or Off. VectorXR frame generation stays disabled. This combination is experimental.");
-        hints.SetToolTip(preferFps, "Use the provider's deeper pipeline to favor FPS over latency. Required for 3x and elliott Auto.");
+        hints.SetToolTip(preferFps, "Use the provider's deeper pipeline to favor FPS over latency. Required for 3X, 4X and elliott Auto.");
         hints.SetToolTip(overlayPosition, "Position of the OFXR FPS overlay, or Off to hide it.");
         hints.SetToolTip(apply, "Close all OpenXR games before applying. Start the game again afterwards; toggling VR mode is not enough.");
         FormClosed += (_, _) => hints.Dispose();

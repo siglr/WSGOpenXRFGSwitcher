@@ -305,15 +305,25 @@ option can fall back to 2X when multi-frame generation is unavailable. The other
 3X choice belongs to the bundled OFXR 0.2.13 mode. Neither optional neural-rendering
 models nor the separate Assetto Corsa add-on are downloaded by WSG.
 
-## djules OFXR 0.2.14.1 / 0.2.14.2
+## djules OFXR 0.2.14.3
 
-The Version list includes reviewed 0.2.14.1 (V551) and 0.2.14.2 (V557) ZIPs. Under More options,
-this release supports Hybrid with optional depth search, 25% optical-flow input,
+WSG 0.1.4 adds support for the reviewed 0.2.14.3 (V577) ZIP, alongside older
+reviewed releases. Choose 2X, 3X or 4X for that version. 4X generates three frames
+per rendered frame and requires Prefer FPS over latency; it adds GPU/VRAM cost.
+R.E.A.L. VR games remain at 2X. Existing presets keep their multiplier.
+HUD fix is available under More options, off by default. It can reduce doubled
+translucent HUDs during stick turns, with Hybrid on or off, at some GPU cost.
+The new 32-bit companion layer is verified separately from the 64-bit layer.
+No administrator-game option is enabled by WSG.
+
+Under More options, djules 0.2.14.1+ supports Hybrid with optional depth search, 25% optical-flow input,
 and overlay size, latency, multiplier and Hybrid-status controls. Hybrid is
 independent of the optical-flow backend; it uses supported games' DLSS motion
 vectors and adds GPU work. Both Hybrid options default off. Fresh djules presets
 use FidelityFX; existing presets keep their saved backend. Older djules and
 Elliott versions do not receive these new djules-only controls.
+For live changes use OFXR's tray; its default Ctrl+Alt+F12 hotkey cycles 2X/3X/4X.
+WSG still applies presets before launch and does not change a running game's setup.
 
 ## Updates and trust
 
