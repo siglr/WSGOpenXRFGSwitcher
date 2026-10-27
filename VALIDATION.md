@@ -21,6 +21,12 @@
 - The upstream tray, x64 layer and Vulkan DLL have valid Julien Choulet signatures;
   the upstream x86 DLL is unsigned and pinned by its reviewed package hash.
   No upstream binary, MSFS or live provider was launched during validation.
+- Published v0.1.4 on GitHub and WeSimGlide. The public ZIP (1,227,203 bytes),
+  checksum, both signed catalog feeds and download page match the staged files.
+  Both catalog signatures verify at revision 2026102701. Version metadata was
+  uploaded last and the normal updater URL returns the signed v0.1.4 identity,
+  SHA-256 `0c010fd793e09f4e752eab600dda9871a33d168644ada451ed009f7a1e18057b`.
+  The public page displays 0.1.4; .htaccess was not changed.
 
 ## v0.1.3 — tig3rmast3r OFXR beta
 
