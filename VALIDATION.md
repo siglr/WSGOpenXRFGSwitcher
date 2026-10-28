@@ -1,3 +1,24 @@
+## Provider catalog 2026102801 — VectorXR v0.19.3
+
+- Reviewed the v0.19.2-to-v0.19.3 tagged settings-schema, native parser, app
+  normalization, single-instance and tray changes. Configuration remains version
+  3; WSG's managed FG fields retain their values and meanings. New prediction,
+  performance-overlay and row-order settings remain under VectorXR's control.
+- The official 4,113,088-byte installer matches GitHub's SHA-256
+  `1dd7b10950e145d702ee383b53b8b5db112c9a5aec323daf8ff6d12077aef5bc`.
+  Its Authenticode signature is valid and the publisher is DienerTech LLC.
+- 545 isolated core/catalog checks passed. Tests cover the new advanced settings,
+  coexistence, selected-profile precedence and byte-for-byte rollback. Actual
+  released WSG 0.1.2 and 0.1.4 assemblies accept their signed feed updates,
+  preserve all published package identities, expose the v0.19.3 download and
+  preserve its advanced settings without rebuilding the client.
+- VectorXR's new hidden tray process remains detectable by WSG's existing
+  process-name guard. Users must choose Exit from VectorXR's tray before WSG
+  changes its configuration. The README documents this behavior.
+- This is a catalog-only update; WSG remains v0.1.4. No installer, upstream
+  provider, game or live activation was run, and no runtime or user settings
+  were changed. Real headset testing remains pending.
+
 ## v0.1.4 — djules OFXR 0.2.14.3 (V577)
 
 - Reviewed the tagged native settings reader/writer, 4X controls and x86

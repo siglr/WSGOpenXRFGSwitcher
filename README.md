@@ -245,6 +245,12 @@ No removal occurs merely by selecting a card.
 
 ## Versions, notes, and recovery
 
+VectorXR **v0.19.3** is available through the signed provider catalog. Choose
+**Check for updates**, then select it in VectorXR's Version list; no WSG update
+is needed. VectorXR 0.19.3 closes to its own tray by default. Choose **Exit** in
+that tray menu before applying a WSG setup or finishing installation. Its advanced
+prediction and performance-overlay options remain in VectorXR and are preserved.
+
 The version dropdown includes catalog-reviewed releases. For OFXR, install an
 older version and select it before applying. For VectorXR, selecting and installing
 an older version uses the official installer. No historical version configuration

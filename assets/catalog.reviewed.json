@@ -373,8 +373,21 @@
       "DjulesFourX": true,
       "DjulesHudFix": true,
       "MinimumSwitcherVersion": "0.1.4"
+    },
+    {
+      "NativeDlss": false,
+      "Sha256": "1dd7b10950e145d702ee383b53b8b5db112c9a5aec323daf8ff6d12077aef5bc",
+      "Version": "v0.19.3",
+      "Url": "https://github.com/DienerTech/vectorxr/releases/download/v0.19.3/VectorXR-0.19.3-windows-x64-setup.exe",
+      "Size": 4113088,
+      "Provider": "VectorXR",
+      "ArchiveRoot": "",
+      "Compatibility": "Experimental — headset validation pending",
+      "Files": {},
+      "Executable": "vectorxr-app.exe",
+      "Repository": "DienerTech/vectorxr"
     }
   ],
   "Product": "WSG-OpenXR-FG-Switcher",
-  "Revision": 2026102701
+  "Revision": 2026102801
 }
