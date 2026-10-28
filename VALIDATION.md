@@ -13,11 +13,15 @@
   preserve all published package identities, expose the v0.19.3 download and
   preserve its advanced settings without rebuilding the client.
 - VectorXR's new hidden tray process remains detectable by WSG's existing
-  process-name guard. Users must choose Exit from VectorXR's tray before WSG
+  process-name guard. Users must choose Quit VectorXR from its tray before WSG
   changes its configuration. The README documents this behavior.
 - This is a catalog-only update; WSG remains v0.1.4. No installer, upstream
   provider, game or live activation was run, and no runtime or user settings
   were changed. Real headset testing remains pending.
+- Both public catalog URLs match the staged files, verify with the existing
+  release key and expose v0.19.3 at revision 2026102801. The app version feed
+  remains byte-identical at v0.1.4. Only the two catalog feeds were uploaded;
+  .htaccess and the app distribution were not changed.
 
 ## v0.1.4 — djules OFXR 0.2.14.3 (V577)
 
