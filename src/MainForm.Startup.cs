@@ -4,6 +4,13 @@ namespace Wsg.Switcher;
 
 public sealed partial class MainForm
 {
+    void ShowStartupProblem(string message) {
+        Restore();
+        SetStatus("Startup setup needs attention: " + message);
+        CenteredMessageBox.Show(this, message + "\n\nFix this issue, then close this window and retry your launcher before starting the game.",
+            "Startup setup needs attention", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+
     async Task ApplyStartupPreset() {
         var preset = new LaunchOptions(ApplyDefault: true).Resolve(state);
         state.SelectedGameId = preset.Id;

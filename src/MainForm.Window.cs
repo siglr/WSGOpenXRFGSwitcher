@@ -58,6 +58,6 @@ public sealed partial class MainForm
             lastVisibleWindowState = WindowState;
             windowPlacementReady = true;
         } else WindowState = lastVisibleWindowState;
-        Show(); Activate();
+        CenteredMessageBox.Restore(this);
     }
 }

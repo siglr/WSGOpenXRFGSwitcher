@@ -17,13 +17,19 @@ internal static class Program
         try {
             var exitTest = args.Length == 2 && args[0] is "--ui-exit-idle" or "--ui-exit-busy" or "--ui-exit-tray";
             var idleTest = args.Length == 2 && args[0] == "--ui-idle";
-            var smoke = exitTest || idleTest || args.Length == 2 && args[0] is "--ui-smoke" or "--ui-preview";
+            var failureTest = args.Length == 2 && args[0] == "--ui-startup-failure";
+            var smoke = exitTest || idleTest || failureTest || args.Length == 2 && args[0] is "--ui-smoke" or "--ui-preview";
             launch = smoke ? new() : LaunchOptions.Parse(args);
             if (!smoke && new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent()).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
                 throw new InvalidOperationException("Open WSG normally, without Run as administrator. Only the VectorXR installer and layer helper request elevation when needed.");
             using var single = new Mutex(true, smoke ? "Local\\WSGOpenXRSmoke" : "Local\\WSGOpenXRFGSwitcher", out var first);
             if (!first) {
-                if (launch.ApplyOnce) return WriteCommandResult(commandStorage = new Storage(), launch, 3, "WSG is already running. Exit it before running an apply command.");
+                if (launch.ApplyOnce) {
+                    var message = "WSG is already running. Exit it before running an apply command.";
+                    var code = RecordCommandFailure(commandStorage = new Storage(), launch, 3, message);
+                    CenteredMessageBox.Show(null, message, "Startup setup needs attention", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return code;
+                }
                 CenteredMessageBox.Show(null, "WSG OpenXR FG Switcher is already running. Restore it from the Windows notification area."); return 3;
             }
             var storage = new Storage(smoke ? Path.Combine(Path.GetFullPath(args[1]), "fixture-data", Guid.NewGuid().ToString("N")) : null);
@@ -44,13 +50,15 @@ internal static class Program
             if (!smoke) ProviderCatalogUpdates.LoadSaved(storage, catalog);
             if (launch.ApplyOnce) {
                 // One-shot commands leave the applied providers running. Explicit UI Exit is a different operation.
-                var preset = launch.Resolve(state);
-                Task.Run(() => StartupLaunch.Apply(storage, state, host, catalog, preset)).GetAwaiter().GetResult();
-                return WriteCommandResult(storage, launch, 0, "Ready for next launch", preset);
+                return ApplyCommand(storage, state, launch, preset => StartupLaunch.Apply(storage, state, host, catalog, preset), message => {
+                    using var recovery = new MainForm(storage, state, host, catalog, startupFailure: message);
+                    Application.Run(recovery);
+                });
             }
             using var form = new MainForm(storage, state, host, catalog, smoke, launch.Minimized);
             if (idleTest) form.Shown += async (_, _) => await form.VerifyBackgroundPreview(Path.GetFullPath(args[1]));
             if (exitTest) form.Shown += async (_, _) => await form.VerifyExitPreview(Path.GetFullPath(args[1]), args[0]["--ui-exit-".Length..]);
+            if (failureTest) form.Shown += async (_, _) => await form.VerifyStartupFailurePreview(Path.GetFullPath(args[1]));
             if (smoke && args[0] == "--ui-smoke") {
                 form.Shown += async (_, _) => {
                     try {
@@ -75,9 +83,13 @@ internal static class Program
             }
             Application.Run(form); return 0;
         } catch (Exception ex) {
-            if (launch?.ApplyOnce == true) return WriteCommandResult(commandStorage ?? new Storage(), launch, 1, ex.Message);
-            if (launch == null && args.Length > 0) { Console.Error.WriteLine(ex.Message); return 2; }
-            CenteredMessageBox.Show(null, ex.Message, "WSG OpenXR FG Switcher", MessageBoxButtons.OK, MessageBoxIcon.Error); return 1;
+            if (launch?.ApplyOnce == true) {
+                var code = RecordCommandFailure(commandStorage, launch, 1, ex.Message);
+                CenteredMessageBox.Show(null, ex.Message, "Startup setup needs attention", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return code;
+            }
+            if (launch == null && args.Length > 0) { Console.Error.WriteLine(ex.Message); CenteredMessageBox.Show(null, ex.Message, icon: MessageBoxIcon.Error); return 2; }
+            CenteredMessageBox.Show(null, ex.Message, icon: MessageBoxIcon.Error); return 1;
         }
     }
     static int WriteCommandResult(Storage storage, LaunchOptions options, int code, string message, GamePreset? preset = null) {
@@ -88,6 +100,27 @@ internal static class Program
             SafeFiles.AtomicWrite(path, result);
             storage.Log("Startup command: " + message); Console.WriteLine(result);
             return code;
-        } catch (Exception ex) { Console.Error.WriteLine("Could not write startup result: " + ex.Message); return 1; }
+        } catch (Exception ex) { throw new IOException("Could not write the startup result. Review the current setup in WSG before starting your game.\n\n" + ex.Message, ex); }
+    }
+    internal static int ApplyCommand(Storage storage, AppState state, LaunchOptions options, Func<GamePreset, Task> apply, Action<string> showFailure) {
+        GamePreset? preset = null;
+        try {
+            preset = options.Resolve(state);
+            Task.Run(() => apply(preset)).GetAwaiter().GetResult();
+            return WriteCommandResult(storage, options, 0, "Ready for next launch", preset);
+        } catch (Exception ex) {
+            var code = RecordCommandFailure(storage, options, 1, ex.Message);
+            if (preset != null) {
+                state.SelectedGameId = preset.Id;
+                state.Games.Single(g => g.Id == preset.Id).Provider = preset.Provider;
+            }
+            showFailure(ex.Message);
+            return code;
+        }
+    }
+    static int RecordCommandFailure(Storage? storage, LaunchOptions options, int code, string message) {
+        try { WriteCommandResult(storage ?? new Storage(), options, code, message); }
+        catch (Exception ex) { Console.Error.WriteLine(message + "\n" + ex.Message); }
+        return code;
     }
 }

@@ -65,6 +65,11 @@ command uses the saved version; it never downloads or substitutes a version.
 Use either `--apply-default` or `--game` with `--provider`. Combining an apply
 command with `--tray` (or either alias) still performs a one-shot apply with no main window.
 
+If automatic application fails, WSG opens visibly with the error even when Start
+in tray is enabled. Fix the issue, close that window, then retry your launcher.
+The failed attempt keeps its failure result and nonzero exit code. Closing this
+error-recovery window exits rather than hiding, without changing providers.
+
 Exit codes: **0** applied; **1** failed; **2** invalid arguments; **3** WSG already
 running. Apply commands write `startup-result.json` under
 `%LOCALAPPDATA%\WSG OpenXR FG Switcher`; `--result "C:\absolute\result.json"`

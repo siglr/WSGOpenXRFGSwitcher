@@ -12,6 +12,7 @@ public sealed partial class MainForm : Form
     readonly ProviderManager providers;
     readonly SwitchCoordinator coordinator;
     readonly bool preview;
+    readonly string? startupFailure;
     readonly ComboBox games = Combo(), method = Combo(), multiplier = Combo(), quality = Combo(), scale = Combo(), overlayPosition = Combo(), overlaySize = Combo();
     readonly CheckBox hybrid = new ThemeCheckBox() { Text = "Hybrid (DLSS game motion + optical flow)", AutoSize = true };
     readonly CheckBox hybridDepth = new ThemeCheckBox() { Text = "Hybrid depth search", AutoSize = true };
@@ -41,14 +42,15 @@ public sealed partial class MainForm : Form
     readonly List<Button> navigation = [];
     readonly List<Control> surfaces = [];
     string observed = "";
-    bool loading, busy, exitRequested, closing;
+    bool loading, busy, exitRequested, closing, startupHandled;
     GamePreset? loadedGame;
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool AllowClose { get; set; }
-    public MainForm(Storage storage, AppState state, WindowsHost host, Catalog catalog, bool preview = false, bool startMinimized = false) {
+    public MainForm(Storage storage, AppState state, WindowsHost host, Catalog catalog, bool preview = false, bool startMinimized = false, string? startupFailure = null) {
         this.storage = storage; this.state = state; this.host = host; this.preview = preview;
+        this.startupFailure = startupFailure;
         providers = new(storage, catalog, host); coordinator = new(storage, host, catalog.Verify, catalog.ValidateCoexistence, catalog.Get);
-        var startHidden = !preview && (startMinimized || state.Startup.StartMinimized);
+        var startHidden = startupFailure == null && !preview && (startMinimized || state.Startup.StartMinimized);
         if (startHidden) { Opacity = 0; ShowInTaskbar = false; }
         Text = "WSG OpenXR FG Switcher"; Font = new Font("Segoe UI", 10); ClientSize = new Size(1160, 850);
         MinimumSize = new Size(1050, 800); StartPosition = FormStartPosition.CenterScreen;
@@ -87,6 +89,9 @@ public sealed partial class MainForm : Form
         });
         FormClosing += (_, e) => {
             SaveBeforeExit();
+            // A failed one-shot command stays visible for repair. Closing its window
+            // ends that failed invocation, preserving providers like a one-shot success.
+            if (startupFailure != null) return;
             if (AllowClose || e.CloseReason == CloseReason.WindowsShutDown) return;
             e.Cancel = true; Hide(); if (!preview) tray.ShowBalloonTip(2500, Text, "Still available in the notification area. Use Exit for cleanup after games close.", ToolTipIcon.Info);
         };
@@ -94,10 +99,12 @@ public sealed partial class MainForm : Form
         FormClosed += (_, _) => { exitTimer.Stop(); exitTimer.Dispose(); tray.Dispose(); };
         exitTimer.Tick += async (_, _) => { if (!busy && exitRequested) await RequestExit(); };
         Shown += async (_, _) => {
+            if (startupHandled) return;
+            startupHandled = true;
             if (startHidden) { Hide(); Opacity = 1; ShowInTaskbar = true; }
             loading = true; ReloadGames(); loading = false; LoadGame();
-            if (preview) { UpdateCurrentSetup(); SetStatus("UI preview • Installation and switching are disabled."); return; }
-            var initialized = false;
+            if (preview) { UpdateCurrentSetup(); SetStatus("UI preview • Installation and switching are disabled."); if (startupFailure != null) ShowStartupProblem(startupFailure); return; }
+            string? startupProblem = startupFailure;
             await Run(async () => {
                 if (!providers.RemovalRecoveryPending && !providers.InstallationRecoveryPending)
                     state.Installations = providers.Discover(state).DistinctBy(i => i.Executable, StringComparer.OrdinalIgnoreCase).ToList();
@@ -107,14 +114,13 @@ public sealed partial class MainForm : Form
                 SetStatus(coordinator.RecoveryPending ? "An interrupted switch needs recovery. Use Recover before applying a setup." : observed.Length == 0 ? "External provider changes detected. Use Rescan setup before applying." : "");
                 runtime.Text = "OpenXR runtime: " + Path.GetFileNameWithoutExtension(OpenXrRegistry.Runtime());
                 storage.Save(state);
-                if (state.Startup.ApplyOnLaunch) await ApplyStartupPreset();
-                initialized = true;
-            });
+                if (state.Startup.ApplyOnLaunch && startupFailure == null) await ApplyStartupPreset();
+            }, ex => startupProblem ??= ex.Message);
             sessionReady = true;
-            if (!initialized) Restore();
+            if (startupProblem != null) ShowStartupProblem(startupProblem);
             RefreshPollingMode();
             // Flight startup stays local. Deferred release checks run only when the window is opened.
-            if (Visible && !state.Startup.ApplyOnLaunch) await CheckVisibleStartupUpdates();
+            if (Visible && startupProblem == null && !state.Startup.ApplyOnLaunch) await CheckVisibleStartupUpdates();
         };
         SetLight(state.LightTheme);
         foreach (var combo in new[] { method, multiplier, quality, scale, overlayPosition, overlaySize }.Concat(versions.Values))
@@ -415,7 +421,7 @@ public sealed partial class MainForm : Form
         }, null!, () => WindowState == FormWindowState.Minimized);
         if (restart) { AllowClose = true; Close(); }
     }
-    async Task Run(Func<Task> action) {
+    async Task Run(Func<Task> action, Action<Exception>? onFailure = null) {
         if (busy) return; busy = true; RefreshPollingMode();
         var disabled = new List<Control>();
         void DisableInputs(Control parent) {
@@ -428,7 +434,11 @@ public sealed partial class MainForm : Form
         }
         DisableInputs(this);
         try { await action(); }
-        catch (Exception ex) { storage.Log(ex.ToString()); SetStatus(ex.Message); if (!preview) { if (!Visible) Restore(); CenteredMessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information); } }
+        catch (Exception ex) {
+            storage.Log(ex.ToString()); SetStatus(ex.Message);
+            if (onFailure != null) onFailure(ex);
+            else if (!preview) { Restore(); CenteredMessageBox.Show(this, ex.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Information); }
+        }
         finally { busy = false; foreach (var control in disabled) if (!control.IsDisposed) control.Enabled = true; if (!IsDisposed && !Disposing) { if (Visible || preview) UpdateCurrentSetup(); RefreshPollingMode(); } }
     }
     void SetStatus(string text) { status.Text = text; status.AccessibleName = text; status.Visible = !string.IsNullOrWhiteSpace(text); }

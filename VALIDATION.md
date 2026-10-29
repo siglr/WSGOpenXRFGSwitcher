@@ -1,3 +1,21 @@
+## v0.1.5 — visible startup errors
+
+- Failed one-shot application opens the switcher visibly before its existing
+  centered error dialog, overriding tray/minimized startup for that attempt.
+  Its failed result is saved before acknowledgement and its exit code stays
+  nonzero. The saved Apply-on-launch preference is not retried in this window.
+- Closing a failed command's recovery window exits without provider cleanup;
+  successful one-shot commands retain their existing silent apply-and-exit flow.
+  Startup initialization runs once even when restoring the taskbar recreates
+  the native window handle.
+- 543 core checks, all 41 updater checks, 33 native-dialog checks and 31 isolated
+  startup UI checks passed. The UI fixture starts hidden and covers external
+  changes, missing installations, busy games, pending recovery and all tray aliases.
+- The signed v0.1.5 package and all 18 installed managed file hashes verified.
+  Updated C:\MSFS Tools\WSG OpenXR FG Switcher for user testing. The installed
+  application was left closed; no game, provider, runtime or user settings were
+  changed during validation. The user approved public deployment after local testing.
+
 ## Provider catalog 2026102801 — VectorXR v0.19.3
 
 - Reviewed the v0.19.2-to-v0.19.3 tagged settings-schema, native parser, app

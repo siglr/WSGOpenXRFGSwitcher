@@ -46,7 +46,7 @@ public sealed partial class MainForm
         if (!preview) _ = CheckVisibleStartupUpdates();
     }
     async Task CheckVisibleStartupUpdates() {
-        if (!Visible || busy || startupUpdatesChecked && DateTimeOffset.UtcNow - lastUpdateCheck < TimeSpan.FromHours(1)) return;
+        if (startupFailure != null || !Visible || busy || startupUpdatesChecked && DateTimeOffset.UtcNow - lastUpdateCheck < TimeSpan.FromHours(1)) return;
         startupUpdatesChecked = true;
         lastUpdateCheck = DateTimeOffset.UtcNow;
         using var cancellation = new CancellationTokenSource();

@@ -12,13 +12,20 @@ internal static class CenteredMessageBox
         MessageBoxDefaultButton defaultButton = MessageBoxDefaultButton.Button1) {
         owner ??= Form.ActiveForm ?? Application.OpenForms.Cast<Form>().FirstOrDefault(f => f.Visible && !f.IsDisposed);
         if (owner is { IsDisposed: true }) owner = null;
-        if (owner != null) {
-            if (!owner.Visible) owner.Show();
-            if (owner.WindowState == FormWindowState.Minimized) owner.WindowState = FormWindowState.Normal;
-        }
+        if (owner != null) Restore(owner);
         using var placement = owner == null ? null : new Placement(owner);
         return owner == null ? MessageBox.Show(message, title, buttons, icon, defaultButton)
             : MessageBox.Show(owner, message, title, buttons, icon, defaultButton);
+    }
+
+    internal static void Restore(Form owner) {
+        if (owner.Opacity != 1) owner.Opacity = 1;
+        if (!owner.ShowInTaskbar) owner.ShowInTaskbar = true;
+        if (owner.WindowState == FormWindowState.Minimized) owner.WindowState = FormWindowState.Normal;
+        owner.Show();
+        // Also undo a launcher's hidden-window flag after the initial Show.
+        if (!IsWindowVisible(owner.Handle)) ShowWindow(owner.Handle, owner.WindowState == FormWindowState.Maximized ? 3 : 9);
+        owner.BringToFront(); owner.Activate();
     }
 
     internal static Point Center(Rectangle parent, Size dialog, Rectangle workingArea) => new(
@@ -61,5 +68,7 @@ internal static class CenteredMessageBox
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr window, StringBuilder name, int size);
     [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr window, uint command);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window, out NativeRect rectangle);
+    [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr window, int command);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr window);
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 }

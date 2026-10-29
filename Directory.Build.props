@@ -3,7 +3,7 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.1.4</Version>
+    <Version>0.1.5</Version>
     <Company>WeSimGlide</Company>
     <Copyright>Copyright © 2026 WeSimGlide</Copyright>
     <Deterministic>true</Deterministic>
