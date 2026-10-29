@@ -15,6 +15,13 @@
   Updated C:\MSFS Tools\WSG OpenXR FG Switcher for user testing. The installed
   application was left closed; no game, provider, runtime or user settings were
   changed during validation. The user approved public deployment after local testing.
+- Published v0.1.5 on GitHub and WeSimGlide. GitHub's five asset digests and the
+  live ZIP, checksum, HTML and both catalog feeds match the staged files. The
+  version feed was uploaded last and exposes the signed v0.1.5 package identity:
+  1,230,363 bytes, SHA-256
+  `bdcc4964df3f8c46cc13bce63c99a58678e0cf000faa0aacd7217bd10bb5c235`.
+  Website checks passed and the public page displays 0.1.5. Defender's ZIP scan
+  returned exit code 0 and no threats. .htaccess was not changed.
 
 ## Provider catalog 2026102801 — VectorXR v0.19.3
 
